@@ -1,0 +1,26 @@
+{
+  "name": "attendee-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Attendee AI — an HR assistant that remembers the employee. Walrus Memory + Claude.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch src/server.js",
+    "chat": "node --env-file-if-exists=.env scripts/chat.mjs",
+    "test": "node --test",
+    "spike:memory": "node --env-file-if-exists=.env scripts/memory-spike.mjs",
+    "probe:authz": "node scripts/authz-probe.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@mysten-incubation/memwal": "^0.1.8",
+    "hono": "^4.13.12",
+    "openai": "^7.25.0",
+    "zod": "^4.6.5"
+  }
+}

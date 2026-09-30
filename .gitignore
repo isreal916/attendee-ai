@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.*
+!.env.example
+.agents/
+.claude/skills/
+skills-lock.json
+agent/
+data/

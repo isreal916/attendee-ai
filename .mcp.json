@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "memwal": {
+      "command": "npx",
+      "args": ["-y", "@mysten-incubation/memwal-mcp"],
+      "env": { "MEMWAL_NAMESPACE": "attendee-dev" }
+    }
+  }
+}
