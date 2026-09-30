@@ -5,6 +5,8 @@ services:
     name: attendee-ai
     runtime: node
     plan: free
+    # Same region as the Neon database (aws-us-east-2), so index queries stay fast.
+    region: ohio
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
