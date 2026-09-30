@@ -13,6 +13,9 @@ How to use memory well:
 - Never present a remembered fact as an HR record, and never invent a memory.
 - Remembering happens automatically after each message; you do not need to do anything to save. If they ask you to remember something, confirm in a few words. Health details, pay figures, and anything about other people are never kept — if they ask you to remember something like that, say plainly that you don't keep that kind of information.
 - If they ask what you remember, summarise the list below and mention they can view or delete it on the memory page.
+- [achievement] memories are wins they told you about. When they ask about their achievements, or are preparing for an appraisal or review, list the ones you remember and make clear these are what they shared with you, not an official record.
+- A [knows] memory means you have already explained that process to them. Do not walk through it again: give a one-line answer and offer the full steps only if they want them.
+- An [open_thread] is something unfinished. On the first message of a conversation, after answering, follow up on it in one short line (for example, ask whether they submitted a drafted leave request). Follow up once, not in every reply.
 
 Boundaries:
 - You only have this employee's data. You cannot look up other employees.
@@ -20,15 +23,30 @@ Boundaries:
 - For policy questions you have no source for, say what you don't know and point them to HR rather than guessing.
 - You are not a lawyer, doctor or counsellor; for serious workplace or personal problems, be kind and direct them to HR or the right professional.
 
+Where things are in the app, for when they ask how to do something. Use these names and do not invent other menus or buttons:
+- Requests: submit and track leave, exemptions, manual attendance, loans and other requests
+- Shift Roster: upcoming shifts
+- My Attendance: clock-ins, clock-outs and attendance reports
+- Payslips: payslips for past pay periods
+- Announcements: company announcements from HR
+- Profile, Security tab: password and two-factor settings
+- AI Assistant: this chat, and the list of what you remember about them
+
 Style: warm, direct, brief. Lead with the answer. Plain text with short paragraphs or a few bullets; no headings.`;
 
-function turnContext({ identity, memories, memoryEnabled }) {
+function turnContext({ identity, memories, memoryEnabled, firstMessage, introduce }) {
   const today = new Date().toISOString().slice(0, 10);
   const lines = [`Today is ${today}. The employee is ${identity.name} at ${identity.companyName}.`];
+  if (firstMessage) lines.push("This is the first message of a new conversation.");
   if (!memoryEnabled) {
     lines.push("Memory is switched off for this conversation: you remember nothing from earlier conversations.");
   } else if (memories.length === 0) {
     lines.push("What you remember about this employee: nothing yet.");
+    if (introduce) {
+      lines.push(
+        "You have not got to know this employee yet. Answer their message first. Then, in one short closing line, invite them to tell you how they like answers, what they are working on, and one goal for this quarter, so you can tailor future help. Ask this once only.",
+      );
+    }
   } else {
     lines.push(
       "What you remember about this employee:",
@@ -52,12 +70,23 @@ export async function runTurn({ llm, adapter, store, identity, messages, memoryE
     ? await store.recall(identity, userMessage)
     : { memories: [], degraded: false };
 
+  const firstMessage = messages.length === 1;
+  // Offered once per employee, and only when memory is really empty — not when the relayer failed to answer.
+  const introduce =
+    useMemory && firstMessage && memories.length === 0 && !degraded && store.needsIntroduction(identity);
+  if (introduce) store.markIntroduced(identity);
   const trace = { tools: [], actions: [] };
 
   const chat = llm.chatWithTools({
     system: `${system(assistantName)}
 
-${turnContext({ identity, memories, memoryEnabled: useMemory })}`,
+${turnContext({
+      identity,
+      memories,
+      memoryEnabled: useMemory,
+      firstMessage,
+      introduce,
+    })}`,
     messages,
     tools: buildTools(adapter, identity, trace),
   });
@@ -86,6 +115,18 @@ ${turnContext({ identity, memories, memoryEnabled: useMemory })}`,
     const result = store.save(identity, item);
     if (result.saved) {
       memoryEvents.push({ event: "saved", memory: result.memory, replaces: item.replaces });
+    }
+  }
+
+  // A drafted-but-unsubmitted request becomes an open thread, so the next
+  // conversation can follow up. This records what the assistant did, not an HR record.
+  if (useMemory) {
+    for (const action of trace.actions) {
+      if (action.type !== "leave_request_draft") continue;
+      const text = `Drafted a leave request (${action.leave_type}) for ${action.start_date} to ${action.end_date}; not yet submitted.`;
+      if (memories.some((m) => m.type === "open_thread" && m.text === text)) continue;
+      const result = store.save(identity, { type: "open_thread", text, source: "action" });
+      if (result.saved) memoryEvents.push({ event: "saved", memory: result.memory, replaces: [] });
     }
   }
 

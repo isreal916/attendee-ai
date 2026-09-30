@@ -1,11 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { expiryFor, formatMemory, parseMemory, screenMemory } from "./policy.js";
 
-// Preferences, goals and current focus apply to every answer, so they are
-// always included — chosen by type, not by how similar they are to the question.
+// Preferences, goals and current focus apply to every answer, and open threads
+// are worth following up whatever the question, so these are always included —
+// chosen by type, not by how similar they are to the question.
 const PROFILE_QUERY = "answer style preferences, career goals and current focus";
-const PROFILE_TYPES = new Set(["preference", "goal", "focus"]);
-const PROFILE_LIMIT = 8;
+const PROFILE_TYPES = new Set(["preference", "goal", "focus", "open_thread"]);
+const PROFILE_LIMIT = 10;
+// Some questions are about a whole category of memory, whatever words they use.
+const ASKS_ABOUT_WINS = /apprais|perform|review|achiev|accomplish|\bwins?\b|proud|promot/i;
+const ASKS_WHAT_IS_REMEMBERED = /\b(remember|know) about me\b|what do you (remember|know)/i;
 const LIST_QUERY = "everything known about this employee";
 
 /**
@@ -83,17 +87,31 @@ export class MemoryStore {
   async recall(identity, query) {
     const ns = this.namespace(identity);
     const [relevant, profile] = await Promise.allSettled([
-      this.client.recall({ query, namespace: ns, limit: 8, maxDistance: this.maxDistance }),
+      this.client.recall({ query, namespace: ns, limit: 10, maxDistance: this.maxDistance }),
       this.client.recall({ query: PROFILE_QUERY, namespace: ns, limit: 30 }),
     ]);
+    const wanted = (type) =>
+      ASKS_WHAT_IS_REMEMBERED.test(query) ||
+      PROFILE_TYPES.has(type) ||
+      (type === "achievement" && ASKS_ABOUT_WINS.test(query));
     const profileHits =
       profile.status === "fulfilled"
-        ? profile.value.results.filter((h) => PROFILE_TYPES.has(parseMemory(h.text).type)).slice(0, PROFILE_LIMIT)
+        ? profile.value.results.filter((h) => wanted(parseMemory(h.text).type)).slice(0, PROFILE_LIMIT)
         : [];
     const hits = [...(relevant.status === "fulfilled" ? relevant.value.results : []), ...profileHits];
     const degraded = relevant.status === "rejected" || profile.status === "rejected";
     if (degraded) this.log.error("memory recall degraded: relayer request failed");
     return { memories: this.#visible(ns, hits), degraded };
+  }
+
+  /** True once, for an employee this service has never saved anything for and never greeted. */
+  needsIntroduction(identity) {
+    const ns = this.namespace(identity);
+    return !this.index.hasAny(ns) && !this.index.wasIntroduced(ns);
+  }
+
+  markIntroduced(identity) {
+    this.index.markIntroduced(this.namespace(identity));
   }
 
   /** Everything held for this employee — for the "What Atty remembers" page. */

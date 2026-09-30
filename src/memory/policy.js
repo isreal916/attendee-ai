@@ -16,6 +16,10 @@ export const MEMORY_TYPES = {
   context: { ttlDays: 90, label: "Context" },
   plan: { ttlDays: 120, label: "Plan" },
   open_thread: { ttlDays: 30, label: "Open thread" },
+  // Wins the employee mentions — kept long enough to cover an appraisal cycle.
+  achievement: { ttlDays: 400, label: "Win" },
+  // A how-to the assistant has already explained, so it is not explained again.
+  knows: { ttlDays: 180, label: "Already knows" },
 };
 
 export const MAX_MEMORY_CHARS = 240;

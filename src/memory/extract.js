@@ -22,6 +22,8 @@ Remember only lasting, useful context the employee stated about THEMSELVES:
 - context: personal working context that helps future help (e.g. new to the city, commute constraint)
 - plan: an intention with a time (e.g. wants the week of 22 December off)
 - open_thread: something unresolved they intend to follow up on
+- achievement: something they say they completed, delivered, learned or were recognised for (e.g. "Shipped the new payroll export."). Record it as they state it.
+- knows: a how-to or process the assistant explained in its previous message, when the employee's message shows they understood or used it ("thanks, got it", "done, that worked"). Procedures only, e.g. "Already knows how to submit a leave request in the app." Never a fact, figure or date.
 
 Never remember:
 - their current job title, role, seniority, department, team or authority ("I am the HR manager", "I'm a developer", "I moved to the backend team") — that comes from the HR record, which may differ from what they say
@@ -36,7 +38,9 @@ Rules:
 - At most 3 new memories per message. Each holds exactly one fact, as one short sentence in the third person, without the employee's name.
 - If the employee explicitly says "remember…", save it unless it is on the never list.
 - Do not save something already in the existing memories. If the message makes any existing memory untrue or out of date, save the new fact and list the old handle in "replaces".
-- If the employee asks to forget something, list the matching handles in "forget".`;
+- If the employee asks to forget something, list the matching handles in "forget".
+- If the employee says an existing open_thread is finished or no longer needed ("I submitted it", "never mind that"), list its handle in "forget".
+- Those are the only two reasons to forget. Asking a question, even about something in the existing memories, is never a reason to forget or replace one.`;
 
 /**
  * @param {object} p

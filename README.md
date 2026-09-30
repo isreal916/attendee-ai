@@ -52,7 +52,26 @@ Every save passes a deterministic screen ([src/memory/policy.js](src/memory/poli
 - Complaints or opinions about a manager or colleague; anything about another person
 - Credentials, bank or ID details
 
-Memories have a type (`preference`, `goal`, `focus`, `context`, `plan`, `open_thread`) and most expire: an open thread after 30 days, a plan after 120.
+Memories have a type, and most expire:
+
+| Type | Example | Kept for |
+|---|---|---|
+| `preference` | Prefers short answers | Until changed |
+| `goal` | Wants to become a tech lead | Until changed |
+| `focus` | Learning Next.js | 180 days |
+| `context` | New to the city | 90 days |
+| `plan` | Wants the week of 21 December off | 120 days |
+| `open_thread` | Drafted a leave request, not yet submitted | 30 days |
+| `achievement` | Shipped the new payroll export | 400 days |
+| `knows` | Already knows how to submit a leave request | 180 days |
+
+Three behaviours build on these:
+
+- **Wins for appraisal time.** Achievements the employee mentions are kept, and recalled whenever they ask about their achievements or an upcoming review.
+- **No repeated explanations.** Once the employee confirms a how-to worked, the assistant gives a one-line answer next time instead of the full walkthrough.
+- **Follow-ups.** Drafting a leave request saves an open thread automatically, and the next conversation asks whether it was submitted.
+
+The first time an employee chats, the assistant asks once how they like answers, what they are working on and one goal for the quarter.
 
 ## Quick start (demo mode, no accounts needed except a model key)
 

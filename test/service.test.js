@@ -246,3 +246,85 @@ test("a memory forgotten while its upload is in flight never reappears", async (
   assert.equal((await store.list(ada)).length, 0, "visible after upload finished");
   assert.equal(store.index.rows(store.namespace(ada))[0].pending_text, null);
 });
+
+test("a drafted leave request becomes an open thread that later conversations recall", async () => {
+  const { runTurn } = await import("../src/agent.js");
+  const store = newStore();
+  const identity = await mockAdapter.resolveIdentity("demo-ada");
+  const systems = [];
+  const llm = {
+    async chatWithTools({ system, tools }) {
+      systems.push(system);
+      if (systems.length === 1) {
+        await tools
+          .find((t) => t.name === "draft_leave_request")
+          .run({ leave_type: "Annual", start_date: "2026-12-21", end_date: "2026-12-25" });
+      }
+      return "ok";
+    },
+    async json() {
+      return { save: [], forget: [] };
+    },
+  };
+
+  const first = await runTurn({
+    llm, adapter: mockAdapter, store, identity,
+    messages: [{ role: "user", content: "Draft leave for the week of 21 December" }],
+  });
+  assert.deepEqual(first.memory.events.map((e) => [e.memory.type, e.memory.text]), [
+    ["open_thread", "Drafted a leave request (Annual) for 2026-12-21 to 2026-12-25; not yet submitted."],
+  ]);
+  // Nothing known yet on a first message → the assistant is told to introduce itself.
+  assert.match(systems[0], /first message of a new conversation/);
+  assert.match(systems[0], /invite them to tell you how they like answers/);
+  await store.settle();
+
+  // A new conversation about something unrelated still sees the open thread, and no second introduction.
+  const second = await runTurn({
+    llm, adapter: mockAdapter, store, identity,
+    messages: [{ role: "user", content: "When is my next shift?" }],
+  });
+  assert.equal(second.memory.recalled.some((m) => m.type === "open_thread"), true);
+  assert.match(systems[1], /\[open_thread\] Drafted a leave request/);
+  assert.doesNotMatch(systems[1], /invite them to tell you/);
+});
+
+test("the introduction is offered once per employee, even if they never share anything", async () => {
+  const { runTurn } = await import("../src/agent.js");
+  const store = newStore();
+  const identity = await mockAdapter.resolveIdentity("demo-ngozi");
+  const systems = [];
+  const llm = {
+    async chatWithTools({ system }) { systems.push(system); return "ok"; },
+    async json() { return { save: [], forget: [] }; },
+  };
+  const ask = () => runTurn({ llm, adapter: mockAdapter, store, identity, messages: [{ role: "user", content: "Hello" }] });
+  await ask();
+  await ask();
+  assert.match(systems[0], /invite them to tell you/);
+  assert.doesNotMatch(systems[1], /invite them to tell you/);
+});
+
+test("wins are recalled for appraisal questions, and everything for 'what do you remember'", async () => {
+  const store = new MemoryStore({
+    client: MemWalMock.create(),
+    index: openIndex(":memory:"),
+    maxDistance: 0.05, // nothing passes the similarity filter
+    log: { error() {} },
+  });
+  store.save(ada, { type: "achievement", text: "Finished reorganising the depot loading bays." });
+  store.save(ada, { type: "knows", text: "Already knows how to submit a leave request in the app." });
+  await store.settle();
+  const types = async (q) => (await store.recall(ada, q)).memories.map((m) => m.type).sort();
+
+  assert.deepEqual(await types("When is my next shift?"), []);
+  assert.deepEqual(await types("My appraisal is coming up, what have I achieved?"), ["achievement"]);
+  assert.deepEqual(await types("What do you remember about me?"), ["achievement", "knows"]);
+});
+
+test("wins and already-explained how-tos are storable; pay and role claims still are not", () => {
+  assert.equal(screenMemory({ type: "achievement", text: "Shipped the new payroll export feature." }).ok, true);
+  assert.equal(screenMemory({ type: "knows", text: "Already knows how to submit a leave request in the app." }).ok, true);
+  assert.equal(screenMemory({ type: "achievement", text: "Was promoted to team lead." }).ok, false);
+  assert.equal(screenMemory({ type: "achievement", text: "Got a salary raise this quarter." }).ok, false);
+});
