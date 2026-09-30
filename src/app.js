@@ -24,13 +24,14 @@ function parseMessages(input) {
  * @param {import("./memory/store.js").MemoryStore} deps.store
  * @param {(p: object) => Promise<object>} deps.runTurn  chat turn (src/agent.js), with its dependencies bound
  */
-export function createApp({ adapter, store, runTurn, corsOrigins = [] }) {
+export function createApp({ adapter, store, runTurn, corsOrigins = [], status = {} }) {
   const app = new Hono();
   const chatHits = new Map();
 
   app.use("*", cors({ origin: corsOrigins, allowHeaders: ["Authorization", "Content-Type"] }));
 
-  app.get("/health", (c) => c.json({ ok: true, hr: adapter.name }));
+  // `status` is non-secret configuration (which backends are in use), to make a deployment checkable.
+  app.get("/health", (c) => c.json({ ok: true, hr: adapter.name, ...status }));
 
   // Everything below needs a signed-in employee. Identity comes only from the
   // verified token — never from the request body or the model.

@@ -35,6 +35,12 @@ const app = createApp({
   adapter,
   store,
   corsOrigins: config.corsOrigins,
+  status: {
+    memory: config.memoryBackend,
+    index: index.kind,
+    model: config.llm.apiKey ? `${config.llm.provider} ${config.llm.model}` : "no model key set",
+    cors: config.corsOrigins,
+  },
   runTurn: (turn) => runTurn({ llm, adapter, store, assistantName: config.assistantName, ...turn }),
 });
 
