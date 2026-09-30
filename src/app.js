@@ -43,9 +43,9 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [] }) {
     await next();
   });
 
-  app.get("/me", (c) => {
+  app.get("/me", async (c) => {
     const { name, companyName } = c.get("identity");
-    return c.json({ name, company: companyName, memory_paused: store.isPaused(c.get("identity")) });
+    return c.json({ name, company: companyName, memory_paused: await store.isPaused(c.get("identity")) });
   });
 
   app.post("/chat", async (c) => {
@@ -89,7 +89,7 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [] }) {
   app.put("/memory-settings", async (c) => {
     const body = await c.req.json().catch(() => null);
     if (typeof body?.paused !== "boolean") return c.json({ error: "Send { paused: true | false }." }, 400);
-    store.setPaused(c.get("identity"), body.paused);
+    await store.setPaused(c.get("identity"), body.paused);
     return c.json({ paused: body.paused });
   });
 

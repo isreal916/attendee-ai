@@ -40,5 +40,7 @@ export const config = {
   // Spike: saves took 26–38s normally, minutes under relayer load.
   rememberTimeoutMs: Number(env.REMEMBER_TIMEOUT_MS || 300_000),
 
+  // The memory index: Postgres when DATABASE_URL is set (e.g. Neon), otherwise a local SQLite file.
+  databaseUrl: env.DATABASE_URL || "",
   dbPath: env.DB_PATH || "data/attendee-ai.db",
 };

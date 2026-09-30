@@ -1,0 +1,30 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# The memory index lives in Postgres (DATABASE_URL), so no disk is needed.
+services:
+  - type: web
+    name: attendee-ai
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HR_ADAPTER
+        value: attendeehrm
+      - key: MEMWAL_SERVER_URL
+        value: https://relayer-staging.memory.walrus.xyz
+      # Secrets and deployment-specific values: entered in the Render dashboard.
+      - key: DATABASE_URL
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: MEMWAL_ACCOUNT_ID
+        sync: false
+      - key: MEMWAL_PRIVATE_KEY
+        sync: false
+      - key: ATTENDEE_API_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

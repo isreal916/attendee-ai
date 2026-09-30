@@ -139,6 +139,42 @@ The frontend sends the signed-in employee's AttendeeHRM access token as a `Beare
 
 To support a different HR system, implement the same five methods as [src/hr/mock.js](src/hr/mock.js) and register it in [src/hr/index.js](src/hr/index.js).
 
+## Deploy
+
+The service is a long-running Node process (Walrus uploads finish in the background after a reply), and it needs its small index to survive restarts. Two ways to give it that:
+
+### Render + Neon (free tiers)
+
+The index lives in a Postgres database, so the host needs no disk.
+
+1. Create a Postgres database, for example a free [Neon](https://neon.com) project, and copy its connection string. The service creates its tables (`attie_*`) on first start.
+2. On [Render](https://render.com): New → Blueprint → pick this repo. `render.yaml` defines the service; Render then asks for the values it does not store in the repo:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | the Postgres connection string |
+   | `DEEPSEEK_API_KEY` | your model key |
+   | `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY` | your Walrus Memory account and delegate key |
+   | `ATTENDEE_API_URL` | your AttendeeHRM API base URL (or set `HR_ADAPTER=mock` for the demo company) |
+   | `CORS_ORIGINS` | your frontend's origin(s), comma-separated, no trailing slash |
+
+3. When it is live, `https://<your-service>.onrender.com/health` answers `{"ok":true,…}`.
+4. Point the frontend at that address (for the AttendeeHRM frontend: `NEXT_PUBLIC_ATTY_API_URL`).
+
+A free Render service sleeps after a quiet spell; the first message afterwards waits for it to wake.
+
+If you already ran the service locally, copy the local index across once, so forgotten memories stay forgotten:
+
+```bash
+npm run migrate:index
+```
+
+### A host with a persistent disk (e.g. Railway)
+
+Leave `DATABASE_URL` unset, mount a volume at `/data` and set `DB_PATH=/data/attendee-ai.db`. `railway.json` sets the start command and health check.
+
+Either way, memory uploads that were in flight when the service restarted are resumed at startup.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -151,7 +187,8 @@ To support a different HR system, implement the same five methods as [src/hr/moc
 | `MEMORY_BACKEND` | `walrus` if a MemWal key is set, else `mock` | |
 | `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY`, `MEMWAL_SERVER_URL` | | Walrus Memory account, delegate key, relayer |
 | `RECALL_MAX_DISTANCE` | `0.75` | Similarity cutoff for message-relevant recall |
-| `DB_PATH` | `data/attendee-ai.db` | Local index (tombstones, expiry, in-flight saves) |
+| `DATABASE_URL` | | Postgres connection string for the index. If unset, a local SQLite file is used |
+| `DB_PATH` | `data/attendee-ai.db` | The local SQLite index (tombstones, expiry, in-flight saves) |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated frontend origins |
 | `ASSISTANT_NAME` | `Attie` | What the assistant calls itself |
 | `PORT` | `8787` | |
@@ -192,11 +229,13 @@ src/
     store.js          Walrus Memory wrapper: save, recall, list, forget
     policy.js         what may be stored; types and expiry
     extract.js        the "what is worth remembering" step
-    index-db.js       local SQLite index beside Walrus
+    index-db.js       the index beside Walrus: SQLite backend
+    index-pg.js       the same index on Postgres
 scripts/
   chat.mjs            terminal chat client
   memory-spike.mjs    Walrus Memory connection and behaviour check
   authz-probe.mjs     checks an AttendeeHRM backend scopes data to the token
+  migrate-index.mjs   copies a local SQLite index into Postgres
   repro/              minimal reproductions for Walrus Memory reports
 ```
 
@@ -204,6 +243,6 @@ scripts/
 
 - **Forget hides; it does not erase.** A forgotten memory stops being recalled immediately, but its encrypted blob stays on Walrus. Permanent deletion needs the account owner's wallet signature (Walrus Memory's security-delete flow) and is not automated here yet.
 - **The operator holds the key.** The service uses one Walrus Memory account and a delegate key on the server. Employees' memories are separated by namespace and are not visible to HR admins through this service, but they are not encrypted to a key only the employee holds.
-- **The local index matters.** Tombstones and expiry dates live in `data/attendee-ai.db`. Lose it and forgotten memories become recallable again. Back it up, or keep it on a persistent disk when deploying.
+- **The index matters.** Tombstones and expiry dates live in the index (Postgres, or the local SQLite file). Lose it and forgotten memories become recallable again. Use a real database or a persistent disk when deploying.
 - **Saves can fail silently for the employee.** If a Walrus upload fails after the chat moved on, the memory is dropped and only the server log says so.
 - **No policy knowledge.** The assistant answers from an employee's own records and memory. It has no company handbook, and says so when asked about policy.

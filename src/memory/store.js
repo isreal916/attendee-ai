@@ -19,7 +19,7 @@ const LIST_QUERY = "everything known about this employee";
  * - Writes are screened by policy, acknowledged immediately and uploaded in the
  *   background (a save takes ~30s on the relayer), so chat never waits.
  * - The relayer cannot forget a single memory, so forgotten/superseded blobs
- *   are tombstoned in the local index and filtered out of every recall.
+ *   are tombstoned in the index (SQLite or Postgres) and filtered out of every recall.
  */
 export class MemoryStore {
   constructor({ client, index, maxDistance = 0.75, rememberTimeoutMs = 300_000, log = console }) {
@@ -41,14 +41,15 @@ export class MemoryStore {
   }
 
   setPaused(identity, paused) {
-    this.index.setPaused(this.namespace(identity), paused);
+    return this.index.setPaused(this.namespace(identity), paused);
   }
 
   /**
-   * Save one memory. Returns at once; the Walrus upload continues in the background.
-   * @returns {{ saved: true, memory: object } | { saved: false, reason: string }}
+   * Save one memory. Resolves once it is recorded in the index; the Walrus
+   * upload continues in the background.
+   * @returns {Promise<{ saved: true, memory: object } | { saved: false, reason: string }>}
    */
-  save(identity, { type, text, expiresInDays = null, source = "extracted", replaces = [] }) {
+  async save(identity, { type, text, expiresInDays = null, source = "extracted", replaces = [] }) {
     const screened = screenMemory({ type, text });
     if (!screened.ok) return { saved: false, reason: screened.reason };
 
@@ -56,15 +57,14 @@ export class MemoryStore {
     const id = randomUUID();
     const createdAt = Date.now();
     const expiresAt = expiryFor(type, expiresInDays, createdAt);
-    this.index.insert({
+    await this.index.insert({
       id, ns, type, status: "saving", pendingText: screened.text, source, createdAt, expiresAt,
     });
-    for (const old of replaces) this.index.setStatus(ns, old, "superseded") || this.#tombstone(ns, old, "superseded");
+    for (const old of replaces) {
+      if (!(await this.index.setStatus(ns, old, "superseded"))) await this.#tombstone(ns, old, "superseded");
+    }
 
-    const upload = this.#upload(id, ns, formatMemory(type, screened.text)).finally(() =>
-      this.inFlight.delete(upload),
-    );
-    this.inFlight.add(upload);
+    this.#startUpload(id, ns, formatMemory(type, screened.text));
 
     return {
       saved: true,
@@ -72,14 +72,30 @@ export class MemoryStore {
     };
   }
 
+  /**
+   * Re-send uploads that were cut off by a restart or deploy. The memory id is
+   * the idempotency key, so one that did reach the relayer is not stored twice.
+   * @returns {Promise<number>} how many uploads were resumed
+   */
+  async resumeUploads() {
+    const rows = await this.index.unfinishedUploads();
+    for (const row of rows) this.#startUpload(row.id, row.ns, formatMemory(row.type, row.pending_text));
+    return rows.length;
+  }
+
+  #startUpload(id, ns, text) {
+    const upload = this.#upload(id, ns, text).finally(() => this.inFlight.delete(upload));
+    this.inFlight.add(upload);
+  }
+
   async #upload(id, ns, text) {
     try {
       const job = await this.client.remember(text, ns, { idempotencyKey: id });
       const done = await this.client.waitForRememberJob(job.job_id, { timeoutMs: this.rememberTimeoutMs });
-      this.index.markStored(id, done.blob_id);
+      await this.index.markStored(id, done.blob_id);
     } catch (err) {
-      this.index.markFailed(id);
       this.log.error(`memory upload failed (${id}): ${err?.message ?? err}`);
+      await this.index.markFailed(id).catch(() => {});
     }
   }
 
@@ -101,34 +117,35 @@ export class MemoryStore {
     const hits = [...(relevant.status === "fulfilled" ? relevant.value.results : []), ...profileHits];
     const degraded = relevant.status === "rejected" || profile.status === "rejected";
     if (degraded) this.log.error("memory recall degraded: relayer request failed");
-    return { memories: this.#visible(ns, hits), degraded };
+    return { memories: await this.#visible(ns, hits), degraded };
   }
 
   /** True once, for an employee this service has never saved anything for and never greeted. */
-  needsIntroduction(identity) {
+  async needsIntroduction(identity) {
     const ns = this.namespace(identity);
-    return !this.index.hasAny(ns) && !this.index.wasIntroduced(ns);
+    return !(await this.index.hasAny(ns)) && !(await this.index.wasIntroduced(ns));
   }
 
   markIntroduced(identity) {
-    this.index.markIntroduced(this.namespace(identity));
+    return this.index.markIntroduced(this.namespace(identity));
   }
 
-  /** Everything held for this employee — for the "What Atty remembers" page. */
+  /** Everything held for this employee — for the "What Attie remembers" page. */
   async list(identity) {
     const ns = this.namespace(identity);
     const { results } = await this.client.recall({ query: LIST_QUERY, namespace: ns, limit: 100 });
-    return this.#visible(ns, results).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    const visible = await this.#visible(ns, results);
+    return visible.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }
 
   /** Hide one memory from every future recall. Returns false if it is unknown. */
   async forget(identity, id) {
     const ns = this.namespace(identity);
-    if (this.index.setStatus(ns, id, "forgotten")) return true;
+    if (await this.index.setStatus(ns, id, "forgotten")) return true;
     // Not in the index (e.g. index was rebuilt): only tombstone blobs that really are this employee's.
     const visible = await this.list(identity);
     if (!visible.some((m) => m.id === id)) return false;
-    this.#tombstone(ns, id, "forgotten");
+    await this.#tombstone(ns, id, "forgotten");
     return true;
   }
 
@@ -139,13 +156,13 @@ export class MemoryStore {
   }
 
   #tombstone(ns, blobId, status) {
-    this.index.insert({ id: randomUUID(), ns, blobId, type: "context", status, createdAt: Date.now() });
+    return this.index.insert({ id: randomUUID(), ns, blobId, type: "context", status, createdAt: Date.now() });
   }
 
   /** Merge relayer hits with the index: drop hidden/expired, add uploads still in flight. */
-  #visible(ns, hits) {
+  async #visible(ns, hits) {
     const now = Date.now();
-    const rows = this.index.rows(ns);
+    const rows = await this.index.rows(ns);
     const byBlob = new Map(rows.filter((r) => r.blob_id).map((r) => [r.blob_id, r]));
     // The relayer can return a blob before its upload job reports done, i.e.
     // before the index knows its blob id. Such hits are matched by text and

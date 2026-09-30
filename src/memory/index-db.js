@@ -3,10 +3,18 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 /**
- * Local index that sits beside Walrus Memory. Walrus holds the memory text;
- * this holds what the relayer cannot: per-memory status (forgotten,
+ * The index that sits beside Walrus Memory. Walrus holds the memory text;
+ * the index holds what the relayer cannot: per-memory status (forgotten,
  * superseded), expiry, and the text of a memory only while its Walrus upload
  * is still in flight (pending_text is cleared once the blob is stored).
+ *
+ * Two interchangeable backends with the same async interface:
+ *   - this file: a local SQLite file, for development and tests
+ *   - index-pg.js: Postgres, for hosts without a persistent disk
+ *
+ * Rows use these columns: id, ns, blob_id, type, status, pending_text,
+ * source, created_at (ms), expires_at (ms or null).
+ * Status is one of: saving | active | forgotten | superseded | failed.
  */
 export function openIndex(path) {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
@@ -17,7 +25,7 @@ export function openIndex(path) {
       ns TEXT NOT NULL,
       blob_id TEXT,
       type TEXT NOT NULL,
-      status TEXT NOT NULL,          -- saving | active | forgotten | superseded | failed
+      status TEXT NOT NULL,
       pending_text TEXT,
       source TEXT,
       created_at INTEGER NOT NULL,
@@ -45,7 +53,7 @@ export function openIndex(path) {
     // recognised if the relayer returns its blob before we have learned the blob id.
     setStatus: db.prepare("UPDATE memories SET status = ? WHERE ns = ? AND (id = ? OR blob_id = ?)"),
     byNs: db.prepare("SELECT * FROM memories WHERE ns = ?"),
-    find: db.prepare("SELECT * FROM memories WHERE ns = ? AND (id = ? OR blob_id = ?)"),
+    unfinished: db.prepare("SELECT * FROM memories WHERE status = 'saving' AND pending_text IS NOT NULL"),
     forgotten: db.prepare("SELECT ns, blob_id FROM memories WHERE status = 'forgotten' AND blob_id IS NOT NULL"),
     count: db.prepare("SELECT COUNT(*) AS n FROM memories WHERE ns = ?"),
     introduced: db.prepare("SELECT 1 FROM introductions WHERE ns = ?"),
@@ -57,25 +65,57 @@ export function openIndex(path) {
   };
 
   return {
-    insert(row) {
+    kind: "sqlite",
+    async insert(row) {
       q.insert.run(
         row.id, row.ns, row.blobId ?? null, row.type, row.status,
         row.pendingText ?? null, row.source ?? null, row.createdAt, row.expiresAt ?? null,
       );
     },
-    markStored: (id, blobId) => q.stored.run(blobId, id),
-    markFailed: (id) => q.failed.run(id),
-    /** Returns true if a known row was updated. */
-    setStatus: (ns, idOrBlob, status) => q.setStatus.run(status, ns, idOrBlob, idOrBlob).changes > 0,
-    rows: (ns) => q.byNs.all(ns),
-    find: (ns, idOrBlob) => q.find.get(ns, idOrBlob, idOrBlob),
+    async markStored(id, blobId) {
+      q.stored.run(blobId, id);
+    },
+    async markFailed(id) {
+      q.failed.run(id);
+    },
+    /** Resolves true if a known row was updated. */
+    async setStatus(ns, idOrBlob, status) {
+      return q.setStatus.run(status, ns, idOrBlob, idOrBlob).changes > 0;
+    },
+    async rows(ns) {
+      return q.byNs.all(ns);
+    },
+    /** Saves whose upload was still in flight when the process last stopped. */
+    async unfinishedUploads() {
+      return q.unfinished.all();
+    },
     /** Blobs awaiting permanent deletion by the owner-wallet admin script. */
-    forgottenBlobs: () => q.forgotten.all(),
-    hasAny: (ns) => q.count.get(ns).n > 0,
-    wasIntroduced: (ns) => !!q.introduced.get(ns),
-    markIntroduced: (ns) => q.setIntroduced.run(ns, Date.now()),
-    isPaused: (ns) => q.paused.get(ns)?.paused === 1,
-    setPaused: (ns, paused) => q.setPaused.run(ns, paused ? 1 : 0),
-    close: () => db.close(),
+    async forgottenBlobs() {
+      return q.forgotten.all();
+    },
+    async hasAny(ns) {
+      return q.count.get(ns).n > 0;
+    },
+    async wasIntroduced(ns) {
+      return !!q.introduced.get(ns);
+    },
+    async markIntroduced(ns) {
+      q.setIntroduced.run(ns, Date.now());
+    },
+    async isPaused(ns) {
+      return q.paused.get(ns)?.paused === 1;
+    },
+    async setPaused(ns, paused) {
+      q.setPaused.run(ns, paused ? 1 : 0);
+    },
+    /** Remove every row for a namespace. For tests; "forget" in the app only tombstones. */
+    async purge(ns) {
+      for (const table of ["memories", "settings", "introductions"]) {
+        db.prepare(`DELETE FROM ${table} WHERE ns = ?`).run(ns);
+      }
+    },
+    async close() {
+      db.close();
+    },
   };
 }

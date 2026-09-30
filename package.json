@@ -14,13 +14,15 @@
     "chat": "node --env-file-if-exists=.env scripts/chat.mjs",
     "test": "node --test",
     "spike:memory": "node --env-file-if-exists=.env scripts/memory-spike.mjs",
-    "probe:authz": "node scripts/authz-probe.mjs"
+    "probe:authz": "node scripts/authz-probe.mjs",
+    "migrate:index": "node --env-file-if-exists=.env scripts/migrate-index.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",
     "@mysten-incubation/memwal": "^0.1.8",
     "hono": "^4.13.12",
     "openai": "^7.25.0",
+    "pg": "^8.23.0",
     "zod": "^4.6.5"
   }
 }

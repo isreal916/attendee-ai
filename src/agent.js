@@ -64,7 +64,7 @@ function turnContext({ identity, memories, memoryEnabled, firstMessage, introduc
  */
 export async function runTurn({ llm, adapter, store, identity, messages, memoryEnabled = true, assistantName = "Attie" }) {
   const userMessage = messages.at(-1).content;
-  const useMemory = memoryEnabled && !store.isPaused(identity);
+  const useMemory = memoryEnabled && !(await store.isPaused(identity));
 
   const { memories, degraded } = useMemory
     ? await store.recall(identity, userMessage)
@@ -73,8 +73,8 @@ export async function runTurn({ llm, adapter, store, identity, messages, memoryE
   const firstMessage = messages.length === 1;
   // Offered once per employee, and only when memory is really empty — not when the relayer failed to answer.
   const introduce =
-    useMemory && firstMessage && memories.length === 0 && !degraded && store.needsIntroduction(identity);
-  if (introduce) store.markIntroduced(identity);
+    useMemory && firstMessage && memories.length === 0 && !degraded && (await store.needsIntroduction(identity));
+  if (introduce) await store.markIntroduced(identity);
   const trace = { tools: [], actions: [] };
 
   const chat = llm.chatWithTools({
@@ -112,7 +112,7 @@ ${turnContext({
     if (await store.forget(identity, id)) memoryEvents.push({ event: "forgotten", id });
   }
   for (const item of extracted.save) {
-    const result = store.save(identity, item);
+    const result = await store.save(identity, item);
     if (result.saved) {
       memoryEvents.push({ event: "saved", memory: result.memory, replaces: item.replaces });
     }
@@ -125,7 +125,7 @@ ${turnContext({
       if (action.type !== "leave_request_draft") continue;
       const text = `Drafted a leave request (${action.leave_type}) for ${action.start_date} to ${action.end_date}; not yet submitted.`;
       if (memories.some((m) => m.type === "open_thread" && m.text === text)) continue;
-      const result = store.save(identity, { type: "open_thread", text, source: "action" });
+      const result = await store.save(identity, { type: "open_thread", text, source: "action" });
       if (result.saved) memoryEvents.push({ event: "saved", memory: result.memory, replaces: [] });
     }
   }

@@ -41,7 +41,7 @@ test("policy blocks HR records and sensitive categories, allows working context"
 
 test("a saved memory is visible at once, then becomes a Walrus blob", async () => {
   const store = newStore();
-  const result = store.save(ada, { type: "goal", text: "Wants to move into a tech-lead role." });
+  const result = await store.save(ada, { type: "goal", text: "Wants to move into a tech-lead role." });
   assert.equal(result.saved, true);
 
   const during = await store.list(ada);
@@ -53,12 +53,12 @@ test("a saved memory is visible at once, then becomes a Walrus blob", async () =
   assert.equal(after[0].status, "active");
   assert.equal(after[0].type, "goal");
   // Once stored, the text lives on Walrus only.
-  assert.equal(store.index.rows(store.namespace(ada))[0].pending_text, null);
+  assert.equal((await store.index.rows(store.namespace(ada)))[0].pending_text, null);
 });
 
 test("blocked content is never written", async () => {
   const store = newStore();
-  const result = store.save(ada, { type: "context", text: "Has 12 leave days remaining." });
+  const result = await store.save(ada, { type: "context", text: "Has 12 leave days remaining." });
   assert.equal(result.saved, false);
   await store.settle();
   assert.equal((await store.list(ada)).length, 0);
@@ -66,8 +66,8 @@ test("blocked content is never written", async () => {
 
 test("forget hides a memory from recall and list; unknown ids are rejected", async () => {
   const store = newStore();
-  store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
-  store.save(ada, { type: "focus", text: "Currently learning Next.js." });
+  await store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
+  await store.save(ada, { type: "focus", text: "Currently learning Next.js." });
   await store.settle();
 
   const plan = (await store.list(ada)).find((m) => m.type === "plan");
@@ -81,11 +81,11 @@ test("forget hides a memory from recall and list; unknown ids are rejected", asy
 
 test("a correction supersedes the memory it replaces", async () => {
   const store = newStore();
-  store.save(ada, { type: "focus", text: "Works on the frontend team." });
+  await store.save(ada, { type: "focus", text: "Works on the frontend team." });
   await store.settle();
   const [old] = await store.list(ada);
 
-  store.save(ada, { type: "focus", text: "Moved to the backend team.", replaces: [old.id] });
+  await store.save(ada, { type: "focus", text: "Moved to the backend team.", replaces: [old.id] });
   await store.settle();
   const texts = (await store.list(ada)).map((m) => m.text);
   assert.deepEqual(texts, ["Moved to the backend team."]);
@@ -93,7 +93,7 @@ test("a correction supersedes the memory it replaces", async () => {
 
 test("employees cannot see or forget each other's memories", async () => {
   const store = newStore();
-  store.save(ada, { type: "preference", text: "Prefers short, bullet-point answers." });
+  await store.save(ada, { type: "preference", text: "Prefers short, bullet-point answers." });
   await store.settle();
   const [mine] = await store.list(ada);
 
@@ -156,7 +156,7 @@ test("API: auth, chat validation, memory endpoints", async () => {
   assert.equal(turns[0].identity.userId, "1001");
   assert.equal(turns[0].memoryEnabled, false);
 
-  store.save(turns[0].identity, { type: "goal", text: "Wants to move into a tech-lead role." });
+  await store.save(turns[0].identity, { type: "goal", text: "Wants to move into a tech-lead role." });
   await store.settle();
   const { memories } = await (await call("/memories")).json();
   assert.equal(memories.length, 1);
@@ -173,7 +173,7 @@ test("a chat turn recalls memory, runs HR tools as the employee, and saves what 
   const { runTurn } = await import("../src/agent.js");
   const store = newStore();
   const identity = await mockAdapter.resolveIdentity("demo-ada");
-  store.save(identity, { type: "preference", text: "Prefers short, bullet-point answers." });
+  await store.save(identity, { type: "preference", text: "Prefers short, bullet-point answers." });
   await store.settle();
 
   const seen = {};
@@ -216,9 +216,9 @@ test("preferences and goals are recalled for any question; unrelated plans are n
     maxDistance: 0.05, // nothing passes the similarity filter, so only the always-on set can appear
     log: { error() {} },
   });
-  store.save(ada, { type: "preference", text: "Prefers short answers." });
-  store.save(ada, { type: "goal", text: "Wants to become a tech lead." });
-  store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
+  await store.save(ada, { type: "preference", text: "Prefers short answers." });
+  await store.save(ada, { type: "goal", text: "Wants to become a tech lead." });
+  await store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
   await store.settle();
 
   const { memories } = await store.recall(ada, "When is my next shift?");
@@ -234,7 +234,7 @@ test("a memory forgotten while its upload is in flight never reappears", async (
   client.waitForRememberJob = async (...args) => { await uploadGate; return wait(...args); };
 
   const store = new MemoryStore({ client, index: openIndex(":memory:"), maxDistance: 2, log: { error() {} } });
-  const { memory } = store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
+  const { memory } = await store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
   await new Promise((r) => setTimeout(r, 10)); // remember() accepted; blob now visible to recall
 
   assert.equal(await store.forget(ada, memory.id), true);
@@ -244,7 +244,7 @@ test("a memory forgotten while its upload is in flight never reappears", async (
   finishUpload();
   await store.settle();
   assert.equal((await store.list(ada)).length, 0, "visible after upload finished");
-  assert.equal(store.index.rows(store.namespace(ada))[0].pending_text, null);
+  assert.equal((await store.index.rows(store.namespace(ada)))[0].pending_text, null);
 });
 
 test("a drafted leave request becomes an open thread that later conversations recall", async () => {
@@ -312,8 +312,8 @@ test("wins are recalled for appraisal questions, and everything for 'what do you
     maxDistance: 0.05, // nothing passes the similarity filter
     log: { error() {} },
   });
-  store.save(ada, { type: "achievement", text: "Finished reorganising the depot loading bays." });
-  store.save(ada, { type: "knows", text: "Already knows how to submit a leave request in the app." });
+  await store.save(ada, { type: "achievement", text: "Finished reorganising the depot loading bays." });
+  await store.save(ada, { type: "knows", text: "Already knows how to submit a leave request in the app." });
   await store.settle();
   const types = async (q) => (await store.recall(ada, q)).memories.map((m) => m.type).sort();
 
@@ -327,4 +327,21 @@ test("wins and already-explained how-tos are storable; pay and role claims still
   assert.equal(screenMemory({ type: "knows", text: "Already knows how to submit a leave request in the app." }).ok, true);
   assert.equal(screenMemory({ type: "achievement", text: "Was promoted to team lead." }).ok, false);
   assert.equal(screenMemory({ type: "achievement", text: "Got a salary raise this quarter." }).ok, false);
+});
+
+test("uploads cut off by a restart are resumed, once", async () => {
+  const index = openIndex(":memory:");
+  const client = MemWalMock.create();
+  // First process: the upload never completes before it is stopped.
+  const hung = { ...client, remember: () => new Promise(() => {}), recall: client.recall.bind(client) };
+  const before = new MemoryStore({ client: hung, index, maxDistance: 2, log: { error() {} } });
+  await before.save(ada, { type: "goal", text: "Wants to become a tech lead." });
+
+  // Second process, same index: the upload is picked up and finished.
+  const after = new MemoryStore({ client, index, maxDistance: 2, log: { error() {} } });
+  assert.equal(await after.resumeUploads(), 1);
+  await after.settle();
+  const list = await after.list(ada);
+  assert.deepEqual(list.map((m) => [m.status, m.text]), [["active", "Wants to become a tech lead."]]);
+  assert.equal(await after.resumeUploads(), 0);
 });
