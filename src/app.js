@@ -79,10 +79,10 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
 
   app.get("/memories", async (c) => {
     try {
-      return c.json({ memories: await store.list(c.get("identity")) });
+      return c.json(await store.listForDisplay(c.get("identity")));
     } catch (err) {
       console.error(`memory list failed: ${err?.message ?? err}`);
-      return c.json({ error: "Memory is unavailable right now." }, 502);
+      return c.json({ error: "Memory storage is slow to respond. Try again in a moment." }, 502);
     }
   });
 

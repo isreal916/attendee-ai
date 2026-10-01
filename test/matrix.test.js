@@ -296,3 +296,39 @@ test("API: edit, retry, feedback and the memory count", async () => {
   const { events } = await store.index.usage();
   assert.equal(events.find((e) => e.kind === "helpful").total, 1);
 });
+
+// ---------------------------------------------------------------- slow or unreachable relayer
+
+test("resilience: a failed recall is retried, then the last good copy is used", async () => {
+  const client = MemWalMock.create();
+  const store = newStore({ client });
+  await store.save(ADA, { type: "preference", text: "Prefers short answers." });
+  await store.save(ADA, { type: "plan", text: "Wants the week of 21 December off." });
+  await store.settle();
+
+  // Warm the caches with one good list and one good chat recall.
+  const fresh = await store.listForDisplay(ADA);
+  assert.equal(fresh.stale, false);
+  const plan = fresh.memories.find((m) => m.type === "plan");
+  await store.recall(ADA, "Hello");
+
+  // One failure: the retry covers it.
+  const recall = client.recall.bind(client);
+  let failures = 1;
+  client.recall = async (...args) => (failures-- > 0 ? Promise.reject(new Error("504")) : recall(...args));
+  store.pools.clear();
+  assert.equal((await store.listForDisplay(ADA)).stale, false);
+
+  // Relayer down: the page shows the last good list, still filtered by what was forgotten since.
+  client.recall = async () => Promise.reject(new Error("relayer down"));
+  await store.index.setStatus(store.namespace(ADA), plan.id, "forgotten");
+  const shown = await store.listForDisplay(ADA);
+  assert.equal(shown.stale, true);
+  assert.deepEqual(texts(shown.memories), ["Prefers short answers."]);
+
+  // Chat still gets the always-on preference from the last good pool.
+  store.pools.clear();
+  const { memories, degraded } = await store.recall(ADA, "When is my next shift?");
+  assert.equal(degraded, true);
+  assert.deepEqual(texts(memories), ["Prefers short answers."]);
+});

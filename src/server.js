@@ -25,6 +25,11 @@ const store = new MemoryStore({
   rememberTimeoutMs: config.rememberTimeoutMs,
 });
 
+// The relayer's first recall after a start sets up a session and can take 7–10s;
+// do it now rather than on an employee's first message, and keep it warm.
+store.warmUp().then((ms) => ms != null && console.log(`Memory relayer ready (${ms} ms).`));
+setInterval(() => store.warmUp(), 9 * 60_000).unref();
+
 const resumed = await store.resumeUploads();
 if (resumed) console.log(`Resuming ${resumed} memory upload(s) interrupted by the last shutdown.`);
 

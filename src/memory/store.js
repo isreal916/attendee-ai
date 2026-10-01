@@ -15,6 +15,11 @@ const RECENT_MS = 15 * 60_000;
 const ASKS_ABOUT_REVIEW = /apprais|perform|review|self[- ]?assess|achiev|accomplish|\bwins?\b|proud|promot/i;
 const ASKS_WHAT_IS_REMEMBERED = /\b(remember|know) about me\b|what do you (remember|know)/i;
 const LIST_QUERY = "everything known about this employee";
+// A recall that fails is tried once more after this pause (the relayer's first
+// call after a restart can take 7–10s while it sets up its Seal session).
+const RECALL_RETRY_DELAY_MS = 500;
+// If Walrus cannot be reached, the last good copy is used for this long.
+const STALE_FOR_MS = 30 * 60_000;
 
 const typeOf = (hit) => parseMemory(hit.text).type;
 
@@ -48,6 +53,34 @@ export class MemoryStore {
     this.inFlight = new Set();
     /** Short-lived cache of each employee's memory pool (the always-on candidates). */
     this.pools = new Map();
+    /** Last good pool and list per employee, used only when Walrus cannot be reached. */
+    this.lastPool = new Map();
+    this.lastList = new Map();
+  }
+
+  /** A relayer recall, tried twice. */
+  async #recall(params) {
+    try {
+      return await this.client.recall(params);
+    } catch {
+      await new Promise((r) => setTimeout(r, RECALL_RETRY_DELAY_MS));
+      return this.client.recall(params);
+    }
+  }
+
+  /**
+   * Make one cheap recall so the relayer session is set up before an employee
+   * needs it, and keep it warm. Never throws.
+   */
+  async warmUp() {
+    const t = Date.now();
+    try {
+      await this.client.recall({ query: "warm up", namespace: "attendee:warmup", limit: 1 });
+      return Date.now() - t;
+    } catch (err) {
+      this.log.error(`memory warm-up failed: ${err?.message ?? err}`);
+      return null;
+    }
   }
 
   namespace(identity) {
@@ -159,9 +192,19 @@ export class MemoryStore {
   #pool(ns) {
     const cached = this.pools.get(ns);
     if (cached && Date.now() - cached.at < POOL_TTL_MS) return cached.promise;
-    const promise = this.client.recall({ query: POOL_QUERY, namespace: ns, limit: POOL_LIMIT });
+    const promise = this.#recall({ query: POOL_QUERY, namespace: ns, limit: POOL_LIMIT }).then(
+      (result) => {
+        this.lastPool.set(ns, { at: Date.now(), result });
+        return result;
+      },
+      (err) => {
+        this.pools.delete(ns);
+        const last = this.lastPool.get(ns);
+        if (last && Date.now() - last.at < STALE_FOR_MS) return last.result;
+        throw err;
+      },
+    );
     this.pools.set(ns, { at: Date.now(), promise });
-    promise.catch(() => this.pools.delete(ns));
     return promise;
   }
 
@@ -172,7 +215,7 @@ export class MemoryStore {
   async recall(identity, query, { firstMessage = false } = {}) {
     const ns = this.namespace(identity);
     const [relevant, pool] = await Promise.allSettled([
-      this.client.recall({ query, namespace: ns, limit: 10, maxDistance: this.maxDistance }),
+      this.#recall({ query, namespace: ns, limit: 10, maxDistance: this.maxDistance }),
       this.#pool(ns),
     ]);
     const degraded = relevant.status === "rejected" || pool.status === "rejected";
@@ -219,7 +262,30 @@ export class MemoryStore {
   /** Everything held for this employee, including saves that failed — for the memory page. */
   async list(identity) {
     const ns = this.namespace(identity);
-    const { results } = await this.client.recall({ query: LIST_QUERY, namespace: ns, limit: 100 });
+    const { results } = await this.#recall({ query: LIST_QUERY, namespace: ns, limit: 100 });
+    this.lastList.set(ns, { at: Date.now(), results });
+    return this.#listFrom(ns, results);
+  }
+
+  /**
+   * The list for the memory page. If Walrus cannot be reached, falls back to
+   * the last good copy (re-filtered against the index, so anything forgotten
+   * since stays hidden) and says so.
+   * @returns {Promise<{ memories: object[], stale: boolean, asOf?: number }>}
+   */
+  async listForDisplay(identity) {
+    const ns = this.namespace(identity);
+    try {
+      return { memories: await this.list(identity), stale: false };
+    } catch (err) {
+      const last = this.lastList.get(ns);
+      if (!last || Date.now() - last.at > STALE_FOR_MS) throw err;
+      this.log.error(`memory list served from cache: ${err?.message ?? err}`);
+      return { memories: await this.#listFrom(ns, last.results), stale: true, asOf: last.at };
+    }
+  }
+
+  async #listFrom(ns, results) {
     const { fromHits, pending } = await this.#visible(ns, results, { pending: "all", includeFailed: true });
     return [...pending, ...fromHits].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }
