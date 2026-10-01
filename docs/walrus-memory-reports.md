@@ -96,7 +96,7 @@ console.log(typeof MemWal.prototype.forget);     // "undefined"
 
 - The client-side wait timeout is raised with `status: 504`, the same shape as a gateway error, although the job is still healthy and later completes. A caller that retries on 5xx will store the memory twice unless it thought to pass an `idempotencyKey`.
 - The 404 carried no body (`<no message>`), so there was no way to tell a missing account, a missing route and an overloaded relayer apart.
-- Normal end-to-end save time on staging is 26–39 s (accept ≈ 4 s, `uploaded` at ≈ 32 s, `done` at ≈ 39 s). The default 60 s wait leaves little headroom, and the docs do not mention latency at all.
+- Normal end-to-end save time on staging is 26–39 s (accept ≈ 4 s, `uploaded` at ≈ 32 s, `done` at ≈ 39 s; 29.4 s measured again on 1 Oct with `scripts/repro/idempotency.mjs`). The default 60 s wait leaves little headroom, and the docs do not mention latency at all.
 
 **Suggestions**
 
@@ -159,6 +159,14 @@ Oldest first, and `created_at` is missing. Against the staging relayer an equiva
 **Note:** both are listed as non-optional `peerDependencies` in 0.1.8, so npm 7+ installs them; the README's install line (`npm install @mysten-incubation/memwal`) does not mention them for the default `MemWal` client (it does for `MemWalManual`).
 
 ---
+
+## Verified working
+
+Credit where it is due, since our reports lean on these:
+
+- **Idempotency keys work.** `remember(text, ns, { idempotencyKey })` sent twice with the same key returns the same job and blob, and recall finds one copy (`scripts/repro/idempotency.mjs`, 1 Oct 2026). This is what lets an app safely re-send an upload after a timeout or a restart, which matters given the 504 behaviour in report 3.
+- **Namespaces isolate.** Two namespaces under one account never returned each other's memories in any of our runs (`scripts/memory-spike.mjs`, `npm run eval:behaviour`).
+- **`sort: "recent"` works on the relayer** for "newest wins" corrections (see report 4 for the mock).
 
 ## Checked and dropped
 

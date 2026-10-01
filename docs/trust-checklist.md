@@ -17,7 +17,7 @@ Record the result and a screenshot for each. "Memory panel" means the *What Atti
 
 ## Saving behaviour on the live stack
 
-A Walrus save takes about 30 seconds (29.4 s measured on 2 Oct 2026). Check each of these once:
+A Walrus save takes about 30 seconds (29.4 s measured on 1 Oct 2026). Check each of these once:
 
 | Case | Steps | Expected | Result |
 |---|---|---|---|
