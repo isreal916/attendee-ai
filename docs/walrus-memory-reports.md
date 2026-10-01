@@ -1,6 +1,6 @@
 # Walrus Memory: reports from building Attendee AI
 
-Four reports, each written to be pasted as a separate issue at
+Five reports, each written to be pasted as a separate issue at
 https://github.com/MystenLabs/MemWal/issues.
 
 **Environment for all four**
@@ -139,6 +139,24 @@ Oldest first, and `created_at` is missing. Against the staging relayer an equiva
 **Why it matters:** "newest wins" is exactly the behaviour worth unit-testing for corrections, and it is the one the mock cannot show. Our correction test failed on the mock and passed on the relayer, which cost time working out which side was wrong. Code that reads `created_at` for expiry also behaves differently in tests.
 
 **Suggestion:** record a write time in the mock, return it as `created_at`, and honour `sort: "recent"`.
+
+---
+
+## 5. A required peer dependency is only discovered at the first recall, in production
+
+**Type:** packaging / developer-experience friction. Reproducible.
+
+**Steps**
+
+1. Install the SDK in a project, with an installer that does not add peer dependencies automatically (Yarn classic, `npm --legacy-peer-deps`, or a host's default build command).
+2. `MemWal.create(...)` and start the server: no error.
+3. Call `recall()` (or let a `remember()` job run).
+
+**Actual:** `Cannot find package '@mysten/seal' imported from …/memwal/dist/memwal.js`. The default relayer client imports `@mysten/seal` and `@mysten/sui` lazily (`await import("@mysten/seal")` inside the session setup), so nothing fails at install or start-up. In our deployment every recall and every save failed from the first employee message, and the app could only report "memory unavailable" until we added a health check that ran one real recall.
+
+**Expected:** either the packages the default client always needs are regular dependencies, or `MemWal.create()` checks for them and fails immediately with a clear message.
+
+**Note:** both are listed as non-optional `peerDependencies` in 0.1.8, so npm 7+ installs them; the README's install line (`npm install @mysten-incubation/memwal`) does not mention them for the default `MemWal` client (it does for `MemWalManual`).
 
 ---
 
