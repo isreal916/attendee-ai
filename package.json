@@ -23,6 +23,8 @@
   "dependencies": {
     "@hono/node-server": "^2.1.3",
     "@mysten-incubation/memwal": "^0.1.8",
+    "@mysten/seal": "^1.4.17",
+    "@mysten/sui": "^2.33.2",
     "hono": "^4.13.12",
     "openai": "^7.25.0",
     "pg": "^8.23.0",
