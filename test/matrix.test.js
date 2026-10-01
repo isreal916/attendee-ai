@@ -265,6 +265,8 @@ test("tracking: each turn records counts only — no text", async () => {
   assert.equal(total("turn"), 2);
   assert.equal(total("memories_saved"), 1);
   assert.equal(total("personalised_turn"), 1);
+  assert.equal(total("behaviour_goal_or_focus_used"), 1);
+  assert.equal(total("behaviour_followup_raised"), 0);
   assert.equal(JSON.stringify(events).includes("tech lead"), false);
 });
 

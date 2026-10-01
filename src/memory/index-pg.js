@@ -108,7 +108,7 @@ export async function openPgIndex(connectionString) {
       const events = await pool.query(
         "SELECT ns, kind, SUM(n) AS total, COUNT(DISTINCT (to_timestamp(at / 1000))::date) AS days, MIN(at) AS first, MAX(at) AS last FROM attie_events GROUP BY ns, kind",
       );
-      const statuses = await pool.query("SELECT ns, status, COUNT(*) AS n FROM attie_memories GROUP BY ns, status");
+      const statuses = await pool.query("SELECT ns, status, type, COUNT(*) AS n FROM attie_memories GROUP BY ns, status, type");
       const num = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, /^(total|days|first|last|n)$/.test(k) ? Number(v) : v]));
       return { events: events.rows.map(num), statuses: statuses.rows.map(num) };
     },

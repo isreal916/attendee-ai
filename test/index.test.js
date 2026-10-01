@@ -86,7 +86,9 @@ for (const [name, open] of backends) {
       assert.equal(mine.find((e) => e.kind === "turn").total, 2);
       assert.equal(mine.find((e) => e.kind === "memories_saved").total, 3);
       assert.equal(mine.find((e) => e.kind === "turn").days, 1);
-      assert.equal(statuses.find((s) => s.ns === ns && s.status === "forgotten").n, 2);
+      const forgotten = statuses.filter((s) => s.ns === ns && s.status === "forgotten");
+      assert.equal(forgotten.reduce((sum, s) => sum + Number(s.n), 0), 2);
+      assert.deepEqual(forgotten.map((s) => s.type).sort(), ["goal", "plan"]);
 
       // Settings and the one-time introduction.
       assert.equal(await index.isPaused(ns), false);

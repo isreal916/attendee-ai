@@ -63,7 +63,7 @@ export function openIndex(path) {
     usage: db.prepare(
       "SELECT ns, kind, SUM(n) AS total, COUNT(DISTINCT date(at / 1000, 'unixepoch')) AS days, MIN(at) AS first, MAX(at) AS last FROM events GROUP BY ns, kind",
     ),
-    statusCounts: db.prepare("SELECT ns, status, COUNT(*) AS n FROM memories GROUP BY ns, status"),
+    statusCounts: db.prepare("SELECT ns, status, type, COUNT(*) AS n FROM memories GROUP BY ns, status, type"),
     unfinished: db.prepare("SELECT * FROM memories WHERE status = 'saving' AND pending_text IS NOT NULL"),
     forgotten: db.prepare("SELECT ns, blob_id FROM memories WHERE status = 'forgotten' AND blob_id IS NOT NULL"),
     count: db.prepare("SELECT COUNT(*) AS n FROM memories WHERE ns = ?"),

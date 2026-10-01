@@ -24,7 +24,9 @@ Every memory type has to change what Attie does later. "Already knows how to req
 
 ## Before and after
 
-I measure this with a script that runs real conversations through DeepSeek, with memories on the real Walrus relayer, and asks each question twice, with memory on and off. A judge model checks each answer against a written criterion. The latest run passed 10 of 10:
+[REAL USE — the centrepiece: what the three testers saw over 2–8 October. 3–5 anonymised before/after pairs from their "See answer without memory" screenshots and evidence lines, and the totals from docs/impact-report.md.]
+
+Before anyone else used it, I checked the mechanism with a script that runs real conversations through DeepSeek, with memories on the real Walrus relayer, and asks each question twice, with memory on and off. A judge model checks each answer against a written criterion. The latest run passed 10 of 10. That shows the memory is wired in correctly; whether it's useful is what the testers are for:
 
 - With "prefers short answers" remembered, replies ran **29–43 words across four runs; without memory, 121–148.**
 - "Help me prepare for my performance review" turned two remembered wins into review points. Without memory, it started from scratch: "I don't have any of your past wins or goals saved".
@@ -32,8 +34,6 @@ I measure this with a script that runs real conversations through DeepSeek, with
 - Employee B asking about employee A's hobby got nothing back.
 
 In the app, every personalised reply has "See answer without memory", so testers see the comparison themselves.
-
-[REAL USE: N testers over N days, N memories each, from `npm run report:usage`. One screenshot per tester of Attie recalling something from an earlier day.]
 
 ## What broke
 

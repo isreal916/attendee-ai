@@ -157,9 +157,19 @@ ${turnContext({
     }
   }
 
-  if (!compare) {
+  if (compare) {
+    await store.track(identity, "comparison_viewed");
+  } else {
     const saved = memoryEvents.filter((e) => e.event === "saved");
+    const used = (type) => (useMemory && memories.some((m) => m.type === type) ? 1 : 0);
     await Promise.all([
+      // Which memory behaviours shaped this reply — for the impact report.
+      store.track(identity, "behaviour_preference_applied", used("preference")),
+      store.track(identity, "behaviour_followup_raised", firstMessage ? used("open_thread") : 0),
+      store.track(identity, "behaviour_wins_used", used("achievement")),
+      store.track(identity, "behaviour_goal_or_focus_used", used("goal") || used("focus")),
+      store.track(identity, "behaviour_known_howto", used("knows")),
+      store.track(identity, "behaviour_plan_used", used("plan")),
       store.track(identity, "turn"),
       firstMessage ? store.track(identity, "session") : null,
       useMemory && memories.length ? store.track(identity, "personalised_turn") : null,

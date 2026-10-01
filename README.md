@@ -1,22 +1,62 @@
 # Attendee AI
 
-An HR assistant that remembers the employee.
+**An HR assistant that remembers the employee.**
 
-Most HR chatbots are stateless FAQ bots: every conversation starts from zero, and the employee explains their role, their goals and how they like answers all over again. Attendee AI ("Attie") keeps a small, personal memory for each employee on [Walrus Memory](https://docs.wal.app/walrus-memory), and combines it with live records from the HR system.
+Most HR chatbots forget you the moment the conversation ends. Every time, you explain your role, your goals and how you like answers all over again, and you get the same generic reply as everyone else.
 
-Built for AttendeeHRM, an HR management system, and for Walrus Sessions 8, "Chatbots That Remember".
+Attie, the assistant in [AttendeeHRM](https://attendeehrm.vercel.app), combines two sources:
+
+```
+AttendeeHRM    →  what is true right now     leave, shifts, attendance, pay, job title
+Walrus Memory  →  what matters about you     how you like answers, goals, current focus,
+                                             plans, unfinished things, wins
+```
+
+The HR system is always the source of truth. Memory holds only what the employee chose to share, and never overrides an HR record.
+
+## What that looks like over a week
+
+*Assembled from our test runs: every quoted reply is real output from the real model with memories on the real Walrus relayer, but the memories were set up for each scenario rather than built over one person's actual week. Real-user examples from the 2–8 October testing will replace it.*
+
+- **Day 1.** "I'm learning Next.js. I want to become a tech lead." Attie answers, and shows *I'll remember that*.
+- **Day 3.** "Can I take 21–25 December off? Draft it." Attie checks the live leave balance and drafts the request, which the employee doesn't submit.
+- **Day 4, new conversation.** "When is my next shift?" Attie gives the shift from the roster, then: *"By the way, did you get a chance to submit that annual leave request for 21–25 December? It's still sitting in draft."* Without memory, it gives only the shift.
+- **Days 2–6.** "I mentored a new intern." "I automated the payroll export." Each is kept as a win.
+- **Day 7.** "Help me prepare for my performance review." With memory: *"Here's a starter set of review points drawn from what you've shared with me — not from any official record. Goal: move into a tech lead role. Both of your wins this year point straight at that…"* Without memory: *"I don't have any of your past wins or goals… so we'll build this fresh."*
+
+Every personalised reply in the app has **See answer without memory**, so anyone can check the difference for themselves.
+
+## Evidence
+
+### Product evidence: real employees
+
+Three AttendeeHRM employees use Attie from 2 to 8 October 2026, following [the tester guide](docs/tester-guide.md): their own logins, their own details, about ten minutes a day.
+
+- `npm run report:usage -- --md` writes [docs/impact-report.md](docs/impact-report.md): per employee, days used, sessions, memories created, kept, recalled, corrected and forgotten, save failures and "Helpful" clicks, plus how often each memory behaviour fired. It reads counts only; no conversation text is stored anywhere.
+- Before/after examples come from the testers themselves: a screenshot of *See answer without memory* and one line on whether it helped.
+
+### Engineering evidence
+
+These show the mechanism works. They are not proof that it is useful; that comes from the employees above.
+
+- `npm test` — 44 tests: memory creation (useful kept; sensitive, HR and role claims rejected), recall precision, forgetting, correction, expiry, isolation between employees, HR authority over memory, memory off, failed saves and retries, a slow or unreachable relayer, usage tracking, and the AttendeeHRM adapter's identity checks.
+- `npm run eval:behaviour` — ten conversations through the real model with memories on the real relayer, each compared with memory on and off and graded by a judge model: [docs/eval-results.md](docs/eval-results.md) (10/10 on 1 October).
+- [docs/trust-checklist.md](docs/trust-checklist.md) — the same attacks (isolation, role claims, sensitive data, forgetting, correction, memory off, save failure) checked by hand on the live system.
+- `npm run calibrate:recall` — measures recall distances on the relayer; the cutoff (0.68) comes from it.
+
+## Built with
 
 - **Model and runtime:** DeepSeek (`deepseek-v4-pro` for replies, `deepseek-flash` for the memory step) through its OpenAI-compatible API, on Node.js. Any OpenAI-compatible provider works; Groq is preconfigured as an alternative.
-- **Memory:** Walrus Memory through the `@mysten-incubation/memwal` TypeScript SDK.
+- **Memory:** Walrus Memory through the `@mysten-incubation/memwal` TypeScript SDK (staging relayer).
+- **HR data:** the AttendeeHRM API, called with the employee's own login (or a built-in demo company).
+- Built for Walrus Sessions 8, "Chatbots That Remember".
 
 ## The one rule that shapes everything
-
-Two kinds of information, kept strictly apart:
 
 | Information | Where it lives | Why |
 |---|---|---|
 | Leave balance, attendance, shifts, pay, job title, department | The HR system, fetched live on every question | It changes, and the HR system is the source of truth |
-| Goals, answer preferences, what you are learning, plans, open threads | Walrus Memory | Personal context the employee chose to share |
+| Goals, answer preferences, what you are learning, plans, unfinished things, wins | Walrus Memory | Personal context the employee chose to share |
 
 Memory never holds an HR record, and a remembered fact never overrides one. If an employee says "I'm the HR manager" and the HR record says otherwise, the assistant goes with the record, and the claim is not stored.
 
@@ -72,13 +112,6 @@ A type exists only because it changes what Attie does later:
 A `context` type existed earlier; it changed no specific behaviour, so it is no longer saved (older memories of that type still display). Every memory shows the model when it was shared, so a goal from months ago is checked before being relied on. The memory page groups memories by these purposes, says why each was remembered ("You told me", "From a leave draft", "You edited this"), and lets the employee correct, forget or retry each one.
 
 The first time an employee chats, Attie offers a few one-tap starters ("Keep your answers short", "I'm learning…") instead of a questionnaire, and asks once in its first reply how they like answers, what they are working on and one goal for the quarter.
-
-## Proof that memory changes behaviour
-
-- **Behaviour evaluation** — `npm run eval:behaviour` runs ten real conversations through the configured model with memories on the real Walrus relayer, asks each compared question with memory on and off, and has a judge model check each criterion. Latest results, with the actual replies: [docs/eval-results.md](docs/eval-results.md).
-- **Test matrix** — `npm test` covers memory creation (useful kept; sensitive, HR and role claims rejected), recall precision, behaviour wiring, forgetting, correction, expiry, isolation between employees, HR authority over memory, memory off, save failures and retries, and usage tracking.
-- **Usage report** — `npm run report:usage` prints, per employee: days used, sessions, messages, memories kept, created, recalled, corrected, forgotten, save failures and "this helped" clicks. It reads counts only; no conversation text is stored anywhere.
-- **Real users** — [docs/tester-guide.md](docs/tester-guide.md) is the day-by-day guide the testers follow (also as a page with copy buttons: [docs/tester-guide.html](docs/tester-guide.html)). Three tracks, about ten minutes a day over a week, each designed to leave ten or more genuinely useful memories and to show every memory behaviour once. Testers replace the example details with their own.
 
 ## Quick start (demo mode, no accounts needed except a model key)
 
