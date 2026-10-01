@@ -24,7 +24,7 @@ function parseMessages(input) {
  * @param {import("./memory/store.js").MemoryStore} deps.store
  * @param {(p: object) => Promise<object>} deps.runTurn  chat turn (src/agent.js), with its dependencies bound
  */
-export function createApp({ adapter, store, runTurn, corsOrigins = [], status = {} }) {
+export function createApp({ adapter, store, runTurn, corsOrigins = [], status = {}, checkMemory }) {
   const app = new Hono();
   const chatHits = new Map();
 
@@ -32,6 +32,15 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
 
   // `status` is non-secret configuration (which backends are in use), to make a deployment checkable.
   app.get("/health", (c) => c.json({ ok: true, hr: adapter.name, ...status }));
+
+  // One real recall against the relayer, to tell "memory is slow" from "memory is misconfigured".
+  // Limited to one check a minute: each costs a relayer request.
+  let lastCheck = null;
+  app.get("/health/memory", async (c) => {
+    if (!checkMemory) return c.json({ ok: false, error: "not available" }, 404);
+    if (!lastCheck || Date.now() - lastCheck.at > 60_000) lastCheck = { at: Date.now(), result: await checkMemory() };
+    return c.json(lastCheck.result, lastCheck.result.ok ? 200 : 503);
+  });
 
   // Everything below needs a signed-in employee. Identity comes only from the
   // verified token — never from the request body or the model.

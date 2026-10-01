@@ -18,6 +18,10 @@ const memoryClient =
 
 const index = config.databaseUrl ? await openPgIndex(config.databaseUrl) : openIndex(config.dbPath);
 
+if (config.memoryBackend === "walrus" && !config.memwal.serverUrl) {
+  console.warn("MEMWAL_SERVER_URL is not set: using the mainnet relayer. A testnet (staging) account will not work there.");
+}
+
 const store = new MemoryStore({
   client: memoryClient,
   index,
@@ -42,10 +46,13 @@ const app = createApp({
   corsOrigins: config.corsOrigins,
   status: {
     memory: config.memoryBackend,
+    // Which relayer: an account only exists on one network, and the SDK silently defaults to mainnet.
+    relayer: config.memoryBackend === "walrus" ? (config.memwal.serverUrl ?? "default (mainnet)") : null,
     index: index.kind,
     model: config.llm.apiKey ? `${config.llm.provider} ${config.llm.model}` : "no model key set",
     cors: config.corsOrigins,
   },
+  checkMemory: () => store.checkRelayer(),
   runTurn: (turn) => runTurn({ llm, adapter, store, assistantName: config.assistantName, ...turn }),
 });
 

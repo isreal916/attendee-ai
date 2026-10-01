@@ -68,6 +68,17 @@ export class MemoryStore {
     }
   }
 
+  /** One recall against the relayer, timed, with the error if it fails. For /health/memory. */
+  async checkRelayer() {
+    const t = Date.now();
+    try {
+      await this.client.recall({ query: "health check", namespace: "attendee:warmup", limit: 1 });
+      return { ok: true, ms: Date.now() - t };
+    } catch (err) {
+      return { ok: false, ms: Date.now() - t, status: err?.status ?? null, error: String(err?.message ?? err).slice(0, 300) };
+    }
+  }
+
   /**
    * Make one cheap recall so the relayer session is set up before an employee
    * needs it, and keep it warm. Never throws.
