@@ -8,19 +8,32 @@
  * every write no matter where it came from.
  */
 
-/** Memory types and how long each stays valid (days; null = until changed). */
+/**
+ * Memory types, how long each stays valid (days; null = until changed), and
+ * the behaviour each one changes. A type earns its place only by changing what
+ * the assistant does later.
+ */
 export const MEMORY_TYPES = {
+  // How they want answers, and working constraints → every reply's length, format, language, timing advice.
   preference: { ttlDays: null, label: "Preference" },
+  // Career or development goals → growth advice, review prep.
   goal: { ttlDays: null, label: "Goal" },
+  // What they are learning or working on now → "what next?" advice starts from where they are.
   focus: { ttlDays: 180, label: "Current focus" },
-  context: { ttlDays: 90, label: "Context" },
+  // An intention with a time → leave and planning questions use it; expires soon after its date.
   plan: { ttlDays: 120, label: "Plan" },
+  // Something started and not finished → a one-line follow-up in the next conversation.
   open_thread: { ttlDays: 30, label: "Open thread" },
-  // Wins the employee mentions — kept long enough to cover an appraisal cycle.
+  // Wins they mention → surfaced when they prepare for a review; kept for an appraisal cycle.
   achievement: { ttlDays: 400, label: "Win" },
-  // A how-to the assistant has already explained, so it is not explained again.
+  // A how-to they already know → a one-line answer instead of the full walkthrough.
   knows: { ttlDays: 180, label: "Already knows" },
+  // Retired: no specific behaviour followed from it. Still read so older memories display; never newly saved.
+  context: { ttlDays: 90, label: "Context", retired: true },
 };
+
+/** Types the memory step may create. */
+export const SAVABLE_TYPES = Object.keys(MEMORY_TYPES).filter((t) => !MEMORY_TYPES[t].retired);
 
 export const MAX_MEMORY_CHARS = 240;
 
@@ -47,7 +60,7 @@ const DENY = [
  * @returns {{ ok: true, text: string } | { ok: false, reason: string }}
  */
 export function screenMemory({ type, text }) {
-  if (!MEMORY_TYPES[type]) return { ok: false, reason: `unknown type "${type}"` };
+  if (!SAVABLE_TYPES.includes(type)) return { ok: false, reason: `not a type that can be saved: "${type}"` };
   const clean = String(text ?? "").replace(/\s+/g, " ").trim();
   if (clean.length < 8) return { ok: false, reason: "too short to be useful" };
   if (clean.length > MAX_MEMORY_CHARS) return { ok: false, reason: "too long — one sentence only" };

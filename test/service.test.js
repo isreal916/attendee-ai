@@ -23,7 +23,7 @@ function newStore() {
 }
 
 test("policy blocks HR records and sensitive categories, allows working context", () => {
-  const ok = (text) => screenMemory({ type: "context", text }).ok;
+  const ok = (text) => screenMemory({ type: "focus", text }).ok;
   assert.equal(ok("Wants to move into a tech-lead role."), true);
   assert.equal(ok("Prefers short, bullet-point answers."), true);
   assert.equal(ok("Has 9 leave days left this year."), false);
@@ -209,7 +209,7 @@ test("a chat turn recalls memory, runs HR tools as the employee, and saves what 
   assert.match(seen.system, /Memory is switched off/);
 });
 
-test("preferences and goals are recalled for any question; unrelated plans are not forced in", async () => {
+test("preferences are recalled for any question; goals and plans only when relevant", async () => {
   const store = new MemoryStore({
     client: MemWalMock.create(),
     index: openIndex(":memory:"),
@@ -221,8 +221,14 @@ test("preferences and goals are recalled for any question; unrelated plans are n
   await store.save(ada, { type: "plan", text: "Wants the week of 22 December off." });
   await store.settle();
 
-  const { memories } = await store.recall(ada, "When is my next shift?");
-  assert.deepEqual(memories.map((m) => m.type).sort(), ["goal", "preference"]);
+  await store.save(ada, { type: "open_thread", text: "Drafted a leave request; not yet submitted." });
+  await store.settle();
+  // Mid-conversation: only the preference shapes the answer.
+  let { memories } = await store.recall(ada, "When is my next shift?");
+  assert.deepEqual(memories.map((m) => m.type), ["preference"]);
+  // First message of a conversation: the open thread is worth one follow-up.
+  ({ memories } = await store.recall(ada, "When is my next shift?", { firstMessage: true }));
+  assert.deepEqual(memories.map((m) => m.type).sort(), ["open_thread", "preference"]);
 });
 
 test("a memory forgotten while its upload is in flight never reappears", async () => {

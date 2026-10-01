@@ -35,6 +35,9 @@ export function openIndex(path) {
     CREATE INDEX IF NOT EXISTS memories_blob ON memories (blob_id);
     CREATE TABLE IF NOT EXISTS settings (ns TEXT PRIMARY KEY, paused INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS introductions (ns TEXT PRIMARY KEY, at INTEGER NOT NULL);
+    -- Usage counts for the tester report. Counts and timestamps only, never conversation content.
+    CREATE TABLE IF NOT EXISTS events (ns TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL, at INTEGER NOT NULL);
+    CREATE INDEX IF NOT EXISTS events_ns ON events (ns, kind);
   `);
 
   const q = {
@@ -53,6 +56,14 @@ export function openIndex(path) {
     // recognised if the relayer returns its blob before we have learned the blob id.
     setStatus: db.prepare("UPDATE memories SET status = ? WHERE ns = ? AND (id = ? OR blob_id = ?)"),
     byNs: db.prepare("SELECT * FROM memories WHERE ns = ?"),
+    one: db.prepare("SELECT * FROM memories WHERE ns = ? AND (id = ? OR blob_id = ?)"),
+    retrying: db.prepare("UPDATE memories SET status = 'saving' WHERE ns = ? AND id = ? AND status = 'failed' AND pending_text IS NOT NULL"),
+    live: db.prepare("SELECT COUNT(*) AS n FROM memories WHERE ns = ? AND status IN ('active', 'saving')"),
+    addEvent: db.prepare("INSERT INTO events (ns, kind, n, at) VALUES (?, ?, ?, ?)"),
+    usage: db.prepare(
+      "SELECT ns, kind, SUM(n) AS total, COUNT(DISTINCT date(at / 1000, 'unixepoch')) AS days, MIN(at) AS first, MAX(at) AS last FROM events GROUP BY ns, kind",
+    ),
+    statusCounts: db.prepare("SELECT ns, status, COUNT(*) AS n FROM memories GROUP BY ns, status"),
     unfinished: db.prepare("SELECT * FROM memories WHERE status = 'saving' AND pending_text IS NOT NULL"),
     forgotten: db.prepare("SELECT ns, blob_id FROM memories WHERE status = 'forgotten' AND blob_id IS NOT NULL"),
     count: db.prepare("SELECT COUNT(*) AS n FROM memories WHERE ns = ?"),
@@ -85,6 +96,24 @@ export function openIndex(path) {
     async rows(ns) {
       return q.byNs.all(ns);
     },
+    async row(ns, idOrBlob) {
+      return q.one.get(ns, idOrBlob, idOrBlob) ?? null;
+    },
+    /** A failed save goes back to 'saving'. Resolves true if there was one to retry. */
+    async markRetrying(ns, id) {
+      return q.retrying.run(ns, id).changes > 0;
+    },
+    /** Memories that are stored or still uploading. */
+    async countLive(ns) {
+      return q.live.get(ns).n;
+    },
+    async addEvent(ns, kind, n = 1) {
+      q.addEvent.run(ns, kind, n, Date.now());
+    },
+    /** Per-namespace usage: event totals and the memory status counts. */
+    async usage() {
+      return { events: q.usage.all(), statuses: q.statusCounts.all() };
+    },
     /** Saves whose upload was still in flight when the process last stopped. */
     async unfinishedUploads() {
       return q.unfinished.all();
@@ -110,7 +139,7 @@ export function openIndex(path) {
     },
     /** Remove every row for a namespace. For tests; "forget" in the app only tombstones. */
     async purge(ns) {
-      for (const table of ["memories", "settings", "introductions"]) {
+      for (const table of ["memories", "settings", "introductions", "events"]) {
         db.prepare(`DELETE FROM ${table} WHERE ns = ?`).run(ns);
       }
     },

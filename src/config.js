@@ -35,8 +35,9 @@ export const config = {
     accountId: env.MEMWAL_ACCOUNT_ID,
     serverUrl: env.MEMWAL_SERVER_URL || undefined,
   },
-  // Spike on the staging relayer: relevant hits scored 0.48–0.60 cosine distance.
-  recallMaxDistance: Number(env.RECALL_MAX_DISTANCE || 0.75),
+  // Calibrated with scripts/calibrate-recall.mjs on the staging relayer: at 0.68, 9 of 14 relevant
+  // hits were kept and 1 clearly unrelated one got through; at 0.75, 14 unrelated got through.
+  recallMaxDistance: Number(env.RECALL_MAX_DISTANCE || 0.68),
   // Spike: saves took 26–38s normally, minutes under relayer load.
   rememberTimeoutMs: Number(env.REMEMBER_TIMEOUT_MS || 300_000),
 

@@ -45,8 +45,9 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
   });
 
   app.get("/me", async (c) => {
-    const { name, companyName } = c.get("identity");
-    return c.json({ name, company: companyName, memory_paused: await store.isPaused(c.get("identity")) });
+    const identity = c.get("identity");
+    const [paused, count] = await Promise.all([store.isPaused(identity), store.countLive(identity)]);
+    return c.json({ name: identity.name, company: identity.companyName, memory_paused: paused, memory_count: count });
   });
 
   app.post("/chat", async (c) => {
@@ -63,7 +64,12 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
     if (!messages) return c.json({ error: "Send { messages: [{ role, content }] } ending with a user message." }, 400);
 
     try {
-      const result = await runTurn({ identity, messages, memoryEnabled: body.memory !== false });
+      const result = await runTurn({
+        identity,
+        messages,
+        memoryEnabled: body.memory !== false,
+        compare: body.compare === true,
+      });
       return c.json(result);
     } catch (err) {
       console.error(`chat failed: ${err?.message ?? err}`);
@@ -81,11 +87,44 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
   });
 
   app.delete("/memories/:id", async (c) => {
-    const forgotten = await store.forget(c.get("identity"), c.req.param("id"));
-    return forgotten ? c.json({ forgotten: true }) : c.json({ error: "No such memory." }, 404);
+    const identity = c.get("identity");
+    const forgotten = await store.forget(identity, c.req.param("id"));
+    if (!forgotten) return c.json({ error: "No such memory." }, 404);
+    await store.track(identity, "memories_forgotten");
+    return c.json({ forgotten: true });
   });
 
-  app.delete("/memories", async (c) => c.json({ forgotten: await store.forgetAll(c.get("identity")) }));
+  app.delete("/memories", async (c) => {
+    const identity = c.get("identity");
+    const forgotten = await store.forgetAll(identity);
+    await store.track(identity, "memories_forgotten", forgotten);
+    return c.json({ forgotten });
+  });
+
+  // Correct a memory's wording: the old one stops being recalled, the new one replaces it.
+  app.put("/memories/:id", async (c) => {
+    const identity = c.get("identity");
+    const body = await c.req.json().catch(() => null);
+    if (typeof body?.text !== "string") return c.json({ error: "Send { text }." }, 400);
+    const result = await store.edit(identity, c.req.param("id"), body.text);
+    if (!result.saved) return c.json({ error: result.reason }, result.reason === "No such memory." ? 404 : 400);
+    await store.track(identity, "memories_edited");
+    return c.json({ memory: result.memory });
+  });
+
+  // Try a failed save again.
+  app.post("/memories/:id/retry", async (c) => {
+    const retried = await store.retry(c.get("identity"), c.req.param("id"));
+    return retried ? c.json({ retrying: true }) : c.json({ error: "Nothing to retry." }, 404);
+  });
+
+  // "This helped" on a reply — a count for the tester report, nothing else is stored.
+  app.post("/feedback", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    if (typeof body?.helpful !== "boolean") return c.json({ error: "Send { helpful: true | false }." }, 400);
+    await store.track(c.get("identity"), body.helpful ? "helpful" : "not_helpful");
+    return c.json({ recorded: true });
+  });
 
   app.put("/memory-settings", async (c) => {
     const body = await c.req.json().catch(() => null);

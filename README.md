@@ -26,21 +26,24 @@ Memory never holds an HR record, and a remembered fact never overrides one. If a
 employee message
    │
    ├─ recall from Walrus Memory  (this employee's namespace only)
-   │     • memories relevant to the message
-   │     • preferences, goals and current focus, always
+   │     • preferences, always
+   │     • open threads, on the first message of a conversation
+   │     • wins and goals, when preparing for a review
+   │     • anything else only if relevant to the message (at most 6)
    │
    ├─ reply ──────────────────────────────┐   ├─ memory step (runs alongside the reply)
    │   model + HR tools, called with the  │   │   reads only the employee's message,
    │   employee's own access token        │   │   proposes 0–3 facts worth keeping
    │                                      │   │
    ▼                                      ▼   ▼
-reply + "used N memories" + "live HR data: …"   policy screen → save to Walrus in the background
+reply ("Personalised" · "Live HR data")         policy screen → save to Walrus in the background
 ```
 
 - **One namespace per employee** (`attendee:{companyId}:{userId}`), derived from the verified sign-in. Nothing the browser or the model sends can change it.
-- **Saves never block the chat.** A Walrus save took 26–39 seconds in our tests, so the memory is acknowledged at once ("Will remember: …", with Undo) and uploaded in the background. It is usable in the next message while it uploads.
+- **Saves never block the chat, and never overclaim.** A Walrus save took 26–39 seconds in our tests, so it happens in the background. The chat shows "I'll remember that · saving…" (with Undo) and changes to "saved" only once Walrus confirms. A failed upload is retried once automatically; if it still fails it is shown as "Couldn't save" with a Retry button — never silently dropped and never recalled. While uploading, a memory is already usable in the next message, survives a page refresh, and resumes if the service restarts.
+- **Recall is selective.** The aim is the smallest set of memories that changes this reply. The similarity cutoff (0.68) was calibrated on the real relayer with `npm run calibrate:recall`: at the earlier 0.75, more unrelated memories got through than relevant ones.
 - **Forgetting.** Walrus Memory has no call to forget a single memory, so a forgotten or corrected memory is tombstoned in a small local index and filtered out of every recall. See [Limitations](#limitations).
-- **Memory can be switched off per chat**, which gives an honest before/after comparison on the same question.
+- **Before and after, on any reply.** Every personalised reply has "See answer without memory", which asks the same question again with memory off and shows both. Memory can also be switched off for a whole chat.
 
 ## What is never remembered
 
@@ -52,26 +55,29 @@ Every save passes a deterministic screen ([src/memory/policy.js](src/memory/poli
 - Complaints or opinions about a manager or colleague; anything about another person
 - Credentials, bank or ID details
 
-Memories have a type, and most expire:
+## What each memory type is for
 
-| Type | Example | Kept for |
-|---|---|---|
-| `preference` | Prefers short answers | Until changed |
-| `goal` | Wants to become a tech lead | Until changed |
-| `focus` | Learning Next.js | 180 days |
-| `context` | New to the city | 90 days |
-| `plan` | Wants the week of 21 December off | 120 days |
-| `open_thread` | Drafted a leave request, not yet submitted | 30 days |
-| `achievement` | Shipped the new payroll export | 400 days |
-| `knows` | Already knows how to submit a leave request | 180 days |
+A type exists only because it changes what Attie does later:
 
-Three behaviours build on these:
+| Type | Example | What changes later | Recalled | Kept for |
+|---|---|---|---|---|
+| `preference` | Prefers short answers | Every reply's length, format and language | Always | Until changed |
+| `goal` | Wants to become a tech lead | Growth advice; review prep | When relevant, and for reviews | Until changed |
+| `focus` | Learning Next.js | "What next?" starts from where they are | When relevant | 180 days |
+| `plan` | Wants the week of 21 December off | Leave and planning answers use it | When relevant | Until a week after its date |
+| `open_thread` | Drafted a leave request, not yet submitted | A one-line follow-up in the next conversation | First message of a conversation | 30 days |
+| `achievement` | Automated the payroll export | Turned into review points when preparing for a review | For review questions | 400 days |
+| `knows` | Already knows how to submit a leave request | A one-line answer instead of the walkthrough | When relevant | 180 days |
 
-- **Wins for appraisal time.** Achievements the employee mentions are kept, and recalled whenever they ask about their achievements or an upcoming review.
-- **No repeated explanations.** Once the employee confirms a how-to worked, the assistant gives a one-line answer next time instead of the full walkthrough.
-- **Follow-ups.** Drafting a leave request saves an open thread automatically, and the next conversation asks whether it was submitted.
+A `context` type existed earlier; it changed no specific behaviour, so it is no longer saved (older memories of that type still display). Every memory shows the model when it was shared, so a goal from months ago is checked before being relied on. The memory page groups memories by these purposes, says why each was remembered ("You told me", "From a leave draft", "You edited this"), and lets the employee correct, forget or retry each one.
 
-The first time an employee chats, the assistant asks once how they like answers, what they are working on and one goal for the quarter.
+The first time an employee chats, Attie offers a few one-tap starters ("Keep your answers short", "I'm learning…") instead of a questionnaire, and asks once in its first reply how they like answers, what they are working on and one goal for the quarter.
+
+## Proof that memory changes behaviour
+
+- **Behaviour evaluation** — `npm run eval:behaviour` runs ten real conversations through the configured model with memories on the real Walrus relayer, asks each compared question with memory on and off, and has a judge model check each criterion. Latest results, with the actual replies: [docs/eval-results.md](docs/eval-results.md).
+- **Test matrix** — `npm test` covers memory creation (useful kept; sensitive, HR and role claims rejected), recall precision, behaviour wiring, forgetting, correction, expiry, isolation between employees, HR authority over memory, memory off, save failures and retries, and usage tracking.
+- **Usage report** — `npm run report:usage` prints, per employee: days used, sessions, messages, memories kept, created, recalled, corrected, forgotten, save failures and "this helped" clicks. It reads counts only; no conversation text is stored anywhere.
 
 ## Quick start (demo mode, no accounts needed except a model key)
 
@@ -186,7 +192,7 @@ Either way, memory uploads that were in flight when the service restarted are re
 | `ATTENDEE_API_URL` | | AttendeeHRM API base URL |
 | `MEMORY_BACKEND` | `walrus` if a MemWal key is set, else `mock` | |
 | `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY`, `MEMWAL_SERVER_URL` | | Walrus Memory account, delegate key, relayer |
-| `RECALL_MAX_DISTANCE` | `0.75` | Similarity cutoff for message-relevant recall |
+| `RECALL_MAX_DISTANCE` | `0.68` | Similarity cutoff for message-relevant recall (calibrated, see above) |
 | `DATABASE_URL` | | Postgres connection string for the index. If unset, a local SQLite file is used |
 | `DB_PATH` | `data/attendee-ai.db` | The local SQLite index (tombstones, expiry, in-flight saves) |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated frontend origins |
@@ -201,11 +207,14 @@ All routes except `/health` need `Authorization: Bearer <token>`.
 |---|---|
 | `GET /health` | Liveness |
 | `GET /me` | Signed-in employee's name, company, whether memory is paused |
-| `POST /chat` | `{ messages: [{ role, content }], memory?: boolean }` → `{ reply, memory: { recalled, events }, hr: { lookups, actions } }` |
+| `POST /chat` | `{ messages: [{ role, content }], memory?: boolean, compare?: boolean }` → `{ reply, memory: { recalled, events }, hr: { lookups, actions } }`. `compare` replays a question without memory and is not counted as usage |
 | `GET /memories` | Everything remembered about this employee |
+| `PUT /memories/:id` | `{ text }` — correct a memory; the old one stops being recalled |
+| `POST /memories/:id/retry` | Try a failed save again |
 | `DELETE /memories/:id` | Forget one memory |
 | `DELETE /memories` | Forget everything |
 | `PUT /memory-settings` | `{ paused: boolean }` to stop saving and using memory |
+| `POST /feedback` | `{ helpful: boolean }` — counted for the usage report, nothing else stored |
 
 ## Tests
 
@@ -236,6 +245,9 @@ scripts/
   memory-spike.mjs    Walrus Memory connection and behaviour check
   authz-probe.mjs     checks an AttendeeHRM backend scopes data to the token
   migrate-index.mjs   copies a local SQLite index into Postgres
+  eval-behaviour.mjs  real-model behaviour evaluation (writes docs/eval-results.md)
+  calibrate-recall.mjs  measures recall distances on the real relayer
+  report-usage.mjs    per-employee usage counts
   repro/              minimal reproductions for Walrus Memory reports
 ```
 
@@ -244,5 +256,5 @@ scripts/
 - **Forget hides; it does not erase.** A forgotten memory stops being recalled immediately, but its encrypted blob stays on Walrus. Permanent deletion needs the account owner's wallet signature (Walrus Memory's security-delete flow) and is not automated here yet.
 - **The operator holds the key.** The service uses one Walrus Memory account and a delegate key on the server. Employees' memories are separated by namespace and are not visible to HR admins through this service, but they are not encrypted to a key only the employee holds.
 - **The index matters.** Tombstones and expiry dates live in the index (Postgres, or the local SQLite file). Lose it and forgotten memories become recallable again. Use a real database or a persistent disk when deploying.
-- **Saves can fail silently for the employee.** If a Walrus upload fails after the chat moved on, the memory is dropped and only the server log says so.
+- **Saves are slow and rate-limited.** A save takes about 30 seconds, and the managed relayer allows 60 weighted requests a minute per delegate key: saving many memories at once hits it. Failed saves are retried once and then shown to the employee, but a burst of activity across many employees on one key would need a self-hosted relayer or several keys.
 - **No policy knowledge.** The assistant answers from an employee's own records and memory. It has no company handbook, and says so when asked about policy.

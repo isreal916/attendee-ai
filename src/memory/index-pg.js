@@ -28,6 +28,9 @@ export async function openPgIndex(connectionString) {
     CREATE INDEX IF NOT EXISTS attie_memories_blob ON attie_memories (blob_id);
     CREATE TABLE IF NOT EXISTS attie_settings (ns TEXT PRIMARY KEY, paused BOOLEAN NOT NULL DEFAULT FALSE);
     CREATE TABLE IF NOT EXISTS attie_introductions (ns TEXT PRIMARY KEY, at BIGINT NOT NULL);
+    -- Usage counts for the tester report. Counts and timestamps only, never conversation content.
+    CREATE TABLE IF NOT EXISTS attie_events (ns TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL, at BIGINT NOT NULL);
+    CREATE INDEX IF NOT EXISTS attie_events_ns ON attie_events (ns, kind);
   `);
 
   // BIGINT arrives as a string; the store compares these as numbers.
@@ -74,6 +77,41 @@ export async function openPgIndex(connectionString) {
       const res = await pool.query("SELECT * FROM attie_memories WHERE ns = $1", [ns]);
       return res.rows.map(toRow);
     },
+    async row(ns, idOrBlob) {
+      const res = await pool.query("SELECT * FROM attie_memories WHERE ns = $1 AND (id = $2 OR blob_id = $2)", [
+        ns,
+        idOrBlob,
+      ]);
+      return res.rows[0] ? toRow(res.rows[0]) : null;
+    },
+    /** A failed save goes back to 'saving'. Resolves true if there was one to retry. */
+    async markRetrying(ns, id) {
+      const res = await pool.query(
+        "UPDATE attie_memories SET status = 'saving' WHERE ns = $1 AND id = $2 AND status = 'failed' AND pending_text IS NOT NULL",
+        [ns, id],
+      );
+      return res.rowCount > 0;
+    },
+    /** Memories that are stored or still uploading. */
+    async countLive(ns) {
+      const res = await pool.query(
+        "SELECT COUNT(*) AS n FROM attie_memories WHERE ns = $1 AND status IN ('active', 'saving')",
+        [ns],
+      );
+      return Number(res.rows[0].n);
+    },
+    async addEvent(ns, kind, n = 1) {
+      await pool.query("INSERT INTO attie_events (ns, kind, n, at) VALUES ($1, $2, $3, $4)", [ns, kind, n, Date.now()]);
+    },
+    /** Per-namespace usage: event totals and the memory status counts. */
+    async usage() {
+      const events = await pool.query(
+        "SELECT ns, kind, SUM(n) AS total, COUNT(DISTINCT (to_timestamp(at / 1000))::date) AS days, MIN(at) AS first, MAX(at) AS last FROM attie_events GROUP BY ns, kind",
+      );
+      const statuses = await pool.query("SELECT ns, status, COUNT(*) AS n FROM attie_memories GROUP BY ns, status");
+      const num = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, /^(total|days|first|last|n)$/.test(k) ? Number(v) : v]));
+      return { events: events.rows.map(num), statuses: statuses.rows.map(num) };
+    },
     async unfinishedUploads() {
       const res = await pool.query(
         "SELECT * FROM attie_memories WHERE status = 'saving' AND pending_text IS NOT NULL",
@@ -112,7 +150,7 @@ export async function openPgIndex(connectionString) {
     },
     /** Remove every row for a namespace. For tests; "forget" in the app only tombstones. */
     async purge(ns) {
-      for (const table of ["attie_memories", "attie_settings", "attie_introductions"]) {
+      for (const table of ["attie_memories", "attie_settings", "attie_introductions", "attie_events"]) {
         await pool.query(`DELETE FROM ${table} WHERE ns = $1`, [ns]);
       }
     },

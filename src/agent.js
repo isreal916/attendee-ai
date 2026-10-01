@@ -10,10 +10,11 @@ Two sources of information, with different jobs:
 How to use memory well:
 - Apply remembered preferences (answer length, format, language) without announcing them.
 - When a remembered goal, plan or open thread is relevant to the question, bring it in naturally, the way a colleague who knows them would. Do not recite memories that are not relevant.
-- Never present a remembered fact as an HR record, and never invent a memory.
+- Never present a remembered fact as an HR record, and never invent a memory. If a memory conflicts with an HR tool result, use the HR result and do not repeat the memory as fact.
+- Each memory shows when it was shared. A goal or focus shared long ago may have changed: if it matters to the answer, check in one short question that it is still current.
 - Remembering happens automatically after each message; you do not need to do anything to save. If they ask you to remember something, confirm in a few words. Health details, pay figures, and anything about other people are never kept — if they ask you to remember something like that, say plainly that you don't keep that kind of information.
 - If they ask what you remember, summarise the list below and mention they can view or delete it on the memory page.
-- [achievement] memories are wins they told you about. When they ask about their achievements, or are preparing for an appraisal or review, list the ones you remember and make clear these are what they shared with you, not an official record.
+- [achievement] memories are wins they told you about. When they ask about their achievements, or are preparing for an appraisal or review, use the wins and goals you remember: turn them into concrete review points, connect each win to a goal where it fits, and make clear these come from what they shared with you, not from an official record. Then offer to help them add evidence or numbers.
 - A [knows] memory means you have already explained that process to them. Do not walk through it again: give a one-line answer and offer the full steps only if they want them.
 - An [open_thread] is something unfinished. On the first message of a conversation, after answering, follow up on it in one short line (for example, ask whether they submitted a drafted leave request). Follow up once, not in every reply.
 
@@ -34,6 +35,12 @@ Where things are in the app, for when they ask how to do something. Use these na
 
 Style: warm, direct, brief. Lead with the answer. Plain text with short paragraphs or a few bullets; no headings.`;
 
+function sharedAgo(createdAt) {
+  if (!createdAt) return "";
+  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
+  return days <= 0 ? " (shared today)" : days === 1 ? " (shared yesterday)" : ` (shared ${days} days ago)`;
+}
+
 function turnContext({ identity, memories, memoryEnabled, firstMessage, introduce }) {
   const today = new Date().toISOString().slice(0, 10);
   const lines = [`Today is ${today}. The employee is ${identity.name} at ${identity.companyName}.`];
@@ -50,8 +57,15 @@ function turnContext({ identity, memories, memoryEnabled, firstMessage, introduc
   } else {
     lines.push(
       "What you remember about this employee:",
-      ...memories.map((m) => `- [${m.type}] ${m.text}`),
+      ...memories.map((m) => `- [${m.type}] ${m.text}${sharedAgo(m.createdAt)}`),
     );
+    // A general rule alone was followed about half the time; naming the follow-up for this turn makes it reliable.
+    const threads = firstMessage ? memories.filter((m) => m.type === "open_thread") : [];
+    if (threads.length) {
+      lines.push(
+        `Follow-up due in this reply: after answering their message, end with one short, friendly line asking about: ${threads.map((t) => t.text).join("; ")}`,
+      );
+    }
   }
   return lines.join("\n");
 }
@@ -62,15 +76,25 @@ function turnContext({ identity, memories, memoryEnabled, firstMessage, introduc
  * @param {{ role: "user" | "assistant", content: string }[]} p.messages  ends with the employee's message
  * @param {boolean} p.memoryEnabled  false = the "without memory" comparison mode
  */
-export async function runTurn({ llm, adapter, store, identity, messages, memoryEnabled = true, assistantName = "Attie" }) {
+export async function runTurn({
+  llm,
+  adapter,
+  store,
+  identity,
+  messages,
+  memoryEnabled = true,
+  compare = false,
+  assistantName = "Attie",
+}) {
   const userMessage = messages.at(-1).content;
-  const useMemory = memoryEnabled && !(await store.isPaused(identity));
+  // compare = the "see answer without memory" replay of an earlier question: memory off, nothing recorded.
+  const useMemory = memoryEnabled && !compare && !(await store.isPaused(identity));
+  const firstMessage = messages.length === 1;
 
   const { memories, degraded } = useMemory
-    ? await store.recall(identity, userMessage)
+    ? await store.recall(identity, userMessage, { firstMessage })
     : { memories: [], degraded: false };
 
-  const firstMessage = messages.length === 1;
   // Offered once per employee, and only when memory is really empty — not when the relayer failed to answer.
   const introduce =
     useMemory && firstMessage && memories.length === 0 && !degraded && (await store.needsIntroduction(identity));
@@ -111,7 +135,10 @@ ${turnContext({
   for (const id of extracted.forget) {
     if (await store.forget(identity, id)) memoryEvents.push({ event: "forgotten", id });
   }
+  // A drafted leave request is recorded as an open thread below; a plan about the same leave would duplicate it.
+  const drafted = trace.actions.some((a) => a.type === "leave_request_draft");
   for (const item of extracted.save) {
+    if (drafted && item.type === "plan") continue;
     const result = await store.save(identity, item);
     if (result.saved) {
       memoryEvents.push({ event: "saved", memory: result.memory, replaces: item.replaces });
@@ -128,6 +155,19 @@ ${turnContext({
       const result = await store.save(identity, { type: "open_thread", text, source: "action" });
       if (result.saved) memoryEvents.push({ event: "saved", memory: result.memory, replaces: [] });
     }
+  }
+
+  if (!compare) {
+    const saved = memoryEvents.filter((e) => e.event === "saved");
+    await Promise.all([
+      store.track(identity, "turn"),
+      firstMessage ? store.track(identity, "session") : null,
+      useMemory && memories.length ? store.track(identity, "personalised_turn") : null,
+      store.track(identity, "memories_recalled", memories.length),
+      store.track(identity, "memories_saved", saved.length),
+      store.track(identity, "memories_corrected", saved.filter((e) => e.replaces?.length).length),
+      store.track(identity, "memories_forgotten_in_chat", memoryEvents.length - saved.length),
+    ]);
   }
 
   return {

@@ -67,6 +67,27 @@ for (const [name, open] of backends) {
       const c = (await index.rows(ns)).find((r) => r.id === `${ns}-c`);
       assert.deepEqual([c.status, c.pending_text], ["failed", "Learning Next.js."]);
 
+      // Single-row lookup, retrying a failed save, and the live count.
+      assert.equal((await index.row(ns, `${ns}-blob-b`)).id, `${ns}-b`);
+      assert.equal(await index.row(other, `${ns}-c`), null);
+      assert.equal(await index.countLive(ns), 0);
+      assert.equal(await index.markRetrying(other, `${ns}-c`), false);
+      assert.equal(await index.markRetrying(ns, `${ns}-c`), true);
+      assert.equal((await index.row(ns, `${ns}-c`)).status, "saving");
+      assert.equal(await index.markRetrying(ns, `${ns}-c`), false);
+      assert.equal(await index.countLive(ns), 1);
+
+      // Usage counts.
+      await index.addEvent(ns, "turn");
+      await index.addEvent(ns, "turn");
+      await index.addEvent(ns, "memories_saved", 3);
+      const { events, statuses } = await index.usage();
+      const mine = events.filter((e) => e.ns === ns);
+      assert.equal(mine.find((e) => e.kind === "turn").total, 2);
+      assert.equal(mine.find((e) => e.kind === "memories_saved").total, 3);
+      assert.equal(mine.find((e) => e.kind === "turn").days, 1);
+      assert.equal(statuses.find((s) => s.ns === ns && s.status === "forgotten").n, 2);
+
       // Settings and the one-time introduction.
       assert.equal(await index.isPaused(ns), false);
       await index.setPaused(ns, true);
