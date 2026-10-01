@@ -78,6 +78,7 @@ The first time an employee chats, Attie offers a few one-tap starters ("Keep you
 - **Behaviour evaluation** — `npm run eval:behaviour` runs ten real conversations through the configured model with memories on the real Walrus relayer, asks each compared question with memory on and off, and has a judge model check each criterion. Latest results, with the actual replies: [docs/eval-results.md](docs/eval-results.md).
 - **Test matrix** — `npm test` covers memory creation (useful kept; sensitive, HR and role claims rejected), recall precision, behaviour wiring, forgetting, correction, expiry, isolation between employees, HR authority over memory, memory off, save failures and retries, and usage tracking.
 - **Usage report** — `npm run report:usage` prints, per employee: days used, sessions, messages, memories kept, created, recalled, corrected, forgotten, save failures and "this helped" clicks. It reads counts only; no conversation text is stored anywhere.
+- **Real users** — [docs/tester-guide.md](docs/tester-guide.md) is the day-by-day guide the testers follow (also as a page with copy buttons: [docs/tester-guide.html](docs/tester-guide.html)). Three tracks, about ten minutes a day over a week, each designed to leave ten or more genuinely useful memories and to show every memory behaviour once. Testers replace the example details with their own.
 
 ## Quick start (demo mode, no accounts needed except a model key)
 
@@ -164,10 +165,14 @@ The index lives in a Postgres database, so the host needs no disk.
    | `ATTENDEE_API_URL` | your AttendeeHRM API base URL (or set `HR_ADAPTER=mock` for the demo company) |
    | `CORS_ORIGINS` | your frontend's origin(s), comma-separated, no trailing slash |
 
-3. When it is live, `https://<your-service>.onrender.com/health` answers `{"ok":true,…}`.
-4. Point the frontend at that address (for the AttendeeHRM frontend: `NEXT_PUBLIC_ATTY_API_URL`).
+3. When it is live, check two addresses:
+   - `https://<your-service>.onrender.com/health` lists the backends in use, including the Walrus relayer. The SDK silently defaults to the mainnet relayer, where a staging account does not exist, so check it names the one your account is on.
+   - `https://<your-service>.onrender.com/health/memory` runs one real recall and reports how long it took, or the exact error.
+4. Point the frontend at the service (for the AttendeeHRM frontend: `NEXT_PUBLIC_ATTY_API_URL`).
 
 A free Render service sleeps after a quiet spell; the first message afterwards waits for it to wake.
+
+If you create the service by hand instead of from the blueprint, set every variable in the table above yourself, including `MEMWAL_SERVER_URL` and `NODE_VERSION=24`. The service depends on `@mysten/seal` and `@mysten/sui` directly: the Walrus Memory SDK lists them only as peer dependencies and loads them on the first recall, so a build that skips peer dependencies starts fine and then fails every recall and save.
 
 If you already ran the service locally, copy the local index across once, so forgotten memories stay forgotten:
 
@@ -201,14 +206,15 @@ Either way, memory uploads that were in flight when the service restarted are re
 
 ## API
 
-All routes except `/health` need `Authorization: Bearer <token>`.
+All routes except `/health` and `/health/memory` need `Authorization: Bearer <token>`.
 
 | Route | Purpose |
 |---|---|
-| `GET /health` | Liveness |
+| `GET /health` | Liveness, and which backends are in use (HR source, memory, relayer, index, model, allowed origins) |
+| `GET /health/memory` | One real recall against the relayer: how long it took, or the error. At most one check a minute |
 | `GET /me` | Signed-in employee's name, company, whether memory is paused |
 | `POST /chat` | `{ messages: [{ role, content }], memory?: boolean, compare?: boolean }` → `{ reply, memory: { recalled, events }, hr: { lookups, actions } }`. `compare` replays a question without memory and is not counted as usage |
-| `GET /memories` | Everything remembered about this employee |
+| `GET /memories` | `{ memories, stale }` — everything remembered about this employee. If the relayer cannot be reached, `stale` is true and the list is the last good copy |
 | `PUT /memories/:id` | `{ text }` — correct a memory; the old one stops being recalled |
 | `POST /memories/:id/retry` | Try a failed save again |
 | `DELETE /memories/:id` | Forget one memory |
@@ -222,7 +228,7 @@ All routes except `/health` need `Authorization: Bearer <token>`.
 npm test
 ```
 
-The suite runs offline against the SDK's `MemWalMock` and a fake HR backend. It covers the memory policy, save/recall/forget, corrections, isolation between employees, the AttendeeHRM adapter's identity checks, and a full chat turn.
+The suite runs offline against the SDK's `MemWalMock` and a fake HR backend. It covers the memory policy, save/recall/forget, corrections, expiry, isolation between employees, HR authority over memory, memory off, save failures and retries, a slow or unreachable relayer, usage tracking, the AttendeeHRM adapter's identity checks, and full chat turns. Set `TEST_DATABASE_URL` to also run the index tests against Postgres.
 
 ## Project layout
 
@@ -256,5 +262,6 @@ scripts/
 - **Forget hides; it does not erase.** A forgotten memory stops being recalled immediately, but its encrypted blob stays on Walrus. Permanent deletion needs the account owner's wallet signature (Walrus Memory's security-delete flow) and is not automated here yet.
 - **The operator holds the key.** The service uses one Walrus Memory account and a delegate key on the server. Employees' memories are separated by namespace and are not visible to HR admins through this service, but they are not encrypted to a key only the employee holds.
 - **The index matters.** Tombstones and expiry dates live in the index (Postgres, or the local SQLite file). Lose it and forgotten memories become recallable again. Use a real database or a persistent disk when deploying.
+- **The relayer's first recall is slow.** After the service starts, the first recall takes 7–10 seconds while the SDK sets up its encrypted session, and the SDK gives every recall a fixed 15-second deadline. On a host that sleeps, that can fail the first request. The service warms the session at startup and every 9 minutes, retries a failed recall once, and falls back to the last good list (still filtered by what was forgotten since) when the relayer cannot be reached.
 - **Saves are slow and rate-limited.** A save takes about 30 seconds, and the managed relayer allows 60 weighted requests a minute per delegate key: saving many memories at once hits it. Failed saves are retried once and then shown to the employee, but a burst of activity across many employees on one key would need a self-hosted relayer or several keys.
 - **No policy knowledge.** The assistant answers from an employee's own records and memory. It has no company handbook, and says so when asked about policy.

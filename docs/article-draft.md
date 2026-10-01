@@ -1,68 +1,58 @@
 # How I added long-term memory to an HR chatbot with Walrus Memory (and what broke)
 
-*Draft. Items in [SQUARE BRACKETS] need real screenshots or numbers from the usage period before publishing.*
+*Draft. Items in [SQUARE BRACKETS] need real screenshots or numbers from the testers before publishing.*
 
 Every HR chatbot I have used has the same flaw: it has never met you. Ask "what should I focus on this week?" and it asks what your job is. Ask again next month and it asks again.
 
-I work on AttendeeHRM, an HR system where employees check leave, shifts, attendance and pay. It had an assistant panel that matched keywords to canned answers. For Walrus Sessions 8 I replaced it with **Attie**: an assistant that answers from live HR records and remembers the employee across conversations using Walrus Memory.
+I work on AttendeeHRM, an HR system where employees check leave, shifts, attendance and pay. Its assistant panel used to match keywords to canned answers. For Walrus Sessions 8 I replaced it with **Attie**: an assistant that answers from live HR records and remembers the employee across conversations using Walrus Memory.
 
-**Stack:** DeepSeek (`deepseek-v4-pro`, through its OpenAI-compatible API) on Node.js, the `@mysten-incubation/memwal` SDK, a Next.js frontend. Code: https://github.com/isreal916/attendee-ai
+**Stack:** DeepSeek (`deepseek-v4-pro`) via its OpenAI-compatible API, Node.js, the `@mysten-incubation/memwal` SDK (staging relayer), Postgres, Next.js. Code: https://github.com/isreal916/attendee-ai
 
 ## The rule that shaped everything
 
-An HR assistant handles two kinds of facts, and mixing them is dangerous.
+HR records (leave balance, attendance, pay, job title) change, and the HR system owns them. Attie fetches them live and never stores them. Personal context (how you like answers, goals, what you're learning, plans, wins) is what you choose to share. That goes to Walrus.
 
-- **HR records** (leave balance, attendance, pay, job title) change, and the HR system owns them. Attie fetches these live on every question and never stores them.
-- **Personal context** (goals, how you like answers, what you are learning, plans, wins) is what the employee chooses to share. This goes to Walrus Memory.
+I learned why on day one. I typed "am the hr manager of this company". Attie correctly answered from my real profile, then saved "Is the HR manager of the company" as a memory. Right reply, wrong memory. Job titles are now blocked from memory entirely.
 
-I learned why the line matters on day one. I typed "am the hr manager of this company" as a test. Attie correctly answered from my real profile ("I see your role as Manager in Technical & Support") — and then saved "Is the HR manager of the company" as a memory. The reply was right and the memory was wrong. Job titles are now blocked from memory entirely.
+[SCREENSHOT: the "HR manager" conversation]
 
-[SCREENSHOT: the "HR manager" conversation with the "Will remember" chip]
+## How it works
 
-## How Walrus Memory is wired in
+Each employee gets a namespace built from their verified login, `attendee:{company}:{user}`. On every message, Attie recalls a small set of memories: preferences always; an unfinished thread on the first message of a conversation; wins and goals when you're preparing for a review; anything else only if it's relevant. In parallel, a second model step reads only your message and proposes up to three facts. A hard filter drops HR numbers, health details and anything about other people, and the rest is saved as one typed sentence like `[goal] Wants to become a tech lead.`
 
-Each employee gets their own namespace, built from their verified login: `attendee:{company}:{user}`. On every message:
-
-1. **Recall.** Two searches run in parallel: memories relevant to the message, and the employee's preferences, goals and open threads, which are always included.
-2. **Reply.** The model answers, calling HR tools for anything live.
-3. **Remember.** A separate step reads only the employee's message and proposes up to three facts. Each passes a hard filter (no HR numbers, no health details, nothing about other people) and is saved as one typed sentence, like `[goal] Wants to become a tech lead.`
-
-The employee sees a "Will remember: …" chip with an Undo button, and a page listing everything Attie holds, each with a forget button.
+Every memory type has to change what Attie does later. "Already knows how to request leave" means a one-line answer next time. An unsubmitted leave draft means the next conversation asks about it.
 
 ## Before and after
 
-Same question, same employee, memory switched off and then on. These are from my own testing with a demo account:
+I measure this with a script that runs real conversations through DeepSeek, with memories on the real Walrus relayer, and asks each question twice, with memory on and off. A judge model checks each answer against a written criterion. The latest run passed 10 of 10:
 
-**Without memory:** "I don't have any of your goals on file, so I can't tailor this… If you tell me what's on your plate, I can help you shape it into a plan."
+- With "prefers short answers" remembered, replies ran **29–43 words across four runs; without memory, 121–148.**
+- "Help me prepare for my performance review" turned two remembered wins into review points. Without memory, it started from scratch: "I don't have any of your past wins or goals saved".
+- "How many leave days do I have?" returned the live 20, ignoring an old memory that said 30.
+- Employee B asking about employee A's hobby got nothing back.
 
-**With memory**, in a new conversation days after the employee mentioned learning Next.js and wanting to become a tech lead: "Given your goal to become a tech lead and that you're settling in as a frontend dev learning Next.js, this week I'd focus on: ship one small Next.js thing end to end…"
+In the app, every personalised reply has "See answer without memory", so testers see the comparison themselves.
 
-[REPLACE OR ADD: the same comparison from a real user, with screenshots]
-
-Three behaviours came out of memory that I did not plan at the start:
-
-- **Wins for appraisal time.** Mention "I finished reorganising the loading bays" in passing; weeks later, "what have I achieved?" brings it back.
-- **No repeated explanations.** Once you confirm a how-to worked, the next answer is one line.
-- **Follow-ups.** Draft a leave request and forget to submit it, and the next conversation asks about it.
-
-[EVIDENCE: N users, N memories each, over N days. One screenshot per user of Attie recalling something from an earlier day.]
+[REAL USE: N testers over N days, N memories each, from `npm run report:usage`. One screenshot per tester of Attie recalling something from an earlier day.]
 
 ## What broke
 
-**Saves are slow.** A save took 26–39 seconds to land on Walrus. Waiting would wreck the chat, so Attie acknowledges at once and uploads in the background.
+**Saves are slow.** A save takes 26–39 seconds. Attie answers at once and saves in the background, showing "saving…" until Walrus confirms. My first version said "Will remember" immediately, which overclaimed whenever a save failed.
 
-**You cannot forget one memory.** The SDK has no per-memory delete; its own test mock does, the real client does not. For HR software that is a must, so I keep a small Postgres table of forgotten IDs and filter every recall against it. It works, but lose that table and forgotten memories come back.
+**You can't forget one memory.** The real SDK client has no per-memory delete (its test mock does), so I keep a table of forgotten IDs and filter every recall against it.
 
-**That workaround had a bug.** A memory forgotten while still uploading reappeared for a few seconds, because my code had not yet learned its ID.
+**Relevance needed measuring.** My first similarity cutoff let through more unrelated memories than relevant ones. A small calibration on the real relayer moved it from 0.75 to 0.68.
 
-**Similarity is not enough.** "Prefers short answers" is not similar to "when is my next shift?", so preferences were not being recalled. They are now fetched by type, not by similarity.
+**A rule the model followed half the time.** "Follow up on open threads" in the system prompt worked about half the time. Naming the follow-up explicitly for that turn made it reliable.
 
-**Smaller things:** the docs list a testnet package ID the staging relayer does not use, and a save can "time out" with a 504 while the job quietly succeeds.
+**Production failed in a way development never did.** Deployed on Render, every recall and save failed: "Cannot find package '@mysten/seal'". The SDK lists it as a peer dependency and only loads it on the first recall, so the server started fine. A health check that runs one real recall found it in minutes.
 
-Using DeepSeek instead of Claude or GPT caused no Walrus-specific friction: the SDK does not care which model you run. I did skip its auto-save middleware, because it stores facts from every message without letting me filter them first.
+**The first recall is slow.** After a restart it takes 7–10 seconds to set up its session, and the SDK gives each recall a fixed 15-second deadline. On a free host that sleeps, that matters. Attie now warms the session at startup, retries once, and falls back to the last good copy.
 
-## Would I do it again?
+DeepSeek caused no Walrus-specific friction; the SDK doesn't care which model you use. I skipped its auto-save middleware because it stores facts without letting me filter them first.
 
-Yes. The memory itself was the easy part: `remember()` and `recall()` worked the first day. The real work was deciding what deserves to be remembered, and making forgetting trustworthy.
+## What I'd tell someone starting
+
+`remember()` and `recall()` worked on day one. The real work was deciding what deserves to be remembered, recalling as little as possible, and making saving and forgetting honest. If Walrus Memory disappeared tomorrow, Attie would still answer HR questions. But employees would be back to explaining their preferences, goals and unfinished work every single time.
 
 [X POST: tag @WalrusProtocol, #WalrusMemory]
