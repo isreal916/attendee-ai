@@ -278,7 +278,7 @@ test("a drafted leave request becomes an open thread that later conversations re
     messages: [{ role: "user", content: "Draft leave for the week of 21 December" }],
   });
   assert.deepEqual(first.memory.events.map((e) => [e.memory.type, e.memory.text]), [
-    ["open_thread", "Drafted a leave request (Annual) for 2026-12-21 to 2026-12-25; not yet submitted."],
+    ["open_thread", "Drafted a leave request in chat (Annual) for 2026-12-21 to 2026-12-25; not yet entered or submitted in Requests."],
   ]);
   // Nothing known yet on a first message → the assistant is told to introduce itself.
   assert.match(systems[0], /first message of a new conversation/);

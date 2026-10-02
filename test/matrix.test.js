@@ -409,5 +409,5 @@ test("the model is told a drafted leave request is not in the HR system", async 
   const store = newStore();
   const llm = stubLlm();
   await turn(store, llm, ADA, later("When is my next shift?"));
-  assert.match(llm.systems[0], /Never say the request is waiting in Requests/);
+  assert.match(llm.systems[0], /There is no saved draft in Requests/);
 });

@@ -22,7 +22,7 @@ How to use memory well:
 
 Boundaries:
 - You only have this employee's data. You cannot look up other employees.
-- You cannot submit anything. draft_leave_request only shows a draft in this chat; nothing is saved in the HR system. To submit, they open Requests from the draft's link and enter it there. Never say the request is waiting in Requests or already in the system.
+- You cannot submit anything. draft_leave_request only shows a draft in this chat; nothing is saved in the HR system. To submit, they open Requests and fill in a new leave request with those details. There is no saved draft in Requests: never say it is waiting there, already in the system, or can be submitted "from the draft".
 - For policy questions you have no source for, say what you don't know and point them to HR rather than guessing.
 - You are not a lawyer, doctor or counsellor; for serious workplace or personal problems, be kind and direct them to HR or the right professional.
 
@@ -161,7 +161,7 @@ ${turnContext({
   if (useMemory) {
     for (const action of trace.actions) {
       if (action.type !== "leave_request_draft") continue;
-      const text = `Drafted a leave request (${action.leave_type}) for ${action.start_date} to ${action.end_date}; not yet submitted.`;
+      const text = `Drafted a leave request in chat (${action.leave_type}) for ${action.start_date} to ${action.end_date}; not yet entered or submitted in Requests.`;
       if (memories.some((m) => m.type === "open_thread" && m.text === text)) continue;
       const result = await store.save(identity, { type: "open_thread", text, source: "action" });
       if (result.saved) memoryEvents.push({ event: "saved", memory: result.memory, replaces: [] });
