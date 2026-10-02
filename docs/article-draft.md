@@ -1,58 +1,59 @@
-# How I added long-term memory to an HR chatbot with Walrus Memory (and what broke)
+# How to add memory to a support chatbot: an HR assistant that remembers employees between sessions
 
-*Draft. Items in [SQUARE BRACKETS] need real screenshots or numbers from the testers before publishing.*
+*Draft. [SQUARE BRACKETS] = still to add before publishing. Target 500–800 words: the body is ~730 now, leaving ~70 for Tester 3. Real-use sections are scripted sessions on real staff accounts and say so; replace or add quotes if colleagues use it freely.*
 
-Every HR chatbot I have used has the same flaw: it has never met you. Ask "what should I focus on this week?" and it asks what your job is. Ask again next month and it asks again.
+Every HR chatbot I have used has never met you. Ask "what should I learn next?" and it asks what your job is, every time. Start a leave request, close the tab, and it's gone.
 
-I work on AttendeeHRM, an HR system where employees check leave, shifts, attendance and pay. Its assistant panel used to match keywords to canned answers. For Walrus Sessions 8 I replaced it with **Attie**: an assistant that answers from live HR records and remembers the employee across conversations using Walrus Memory.
+I work on AttendeeHRM, an HR system where employees check leave, shifts, attendance and pay. For Walrus Sessions 8 I built **Attie**, an assistant inside it that answers from live HR records and remembers each employee across conversations using Walrus Memory.
 
-**Stack:** DeepSeek (`deepseek-v4-pro`) via its OpenAI-compatible API, Node.js, the `@mysten-incubation/memwal` SDK (staging relayer), Postgres, Next.js. Code: https://github.com/isreal916/attendee-ai
+**Stack:** DeepSeek (`deepseek-v4-pro`) through its OpenAI-compatible API, Node.js, the `@mysten-incubation/memwal` SDK, Postgres and Next.js. The code and setup steps are at https://github.com/isreal916/attendee-ai.
 
-## The rule that shaped everything
+## One rule: HR records are live, memory is personal
 
-HR records (leave balance, attendance, pay, job title) change, and the HR system owns them. Attie fetches them live and never stores them. Personal context (how you like answers, goals, what you're learning, plans, wins) is what you choose to share. That goes to Walrus.
+Leave balances, pay and job titles change and belong to the HR system, so Attie fetches them live and never stores them. Walrus holds what employees choose to share: answer style, goals, what they're learning, plans, unfinished tasks.
 
-I learned why on day one. I typed "am the hr manager of this company". Attie correctly answered from my real profile, then saved "Is the HR manager of the company" as a memory. Right reply, wrong memory. Job titles are now blocked from memory entirely.
-
-[SCREENSHOT: the "HR manager" conversation]
+On day one I typed "am the hr manager of this company". Attie answered correctly from my profile, then saved "Is the HR manager" as a memory. Right reply, wrong memory, so job titles are now blocked.
 
 ## How it works
 
-Each employee gets a namespace built from their verified login, `attendee:{company}:{user}`. On every message, Attie recalls a small set of memories: preferences always; an unfinished thread on the first message of a conversation; wins and goals when you're preparing for a review; anything else only if it's relevant. In parallel, a second model step reads only your message and proposes up to three facts. A hard filter drops HR numbers, health details and anything about other people, and the rest is saved as one typed sentence like `[goal] Wants to become a tech lead.`
+Each employee's namespace comes from their verified login: `attendee:{company}:{user}`. After each message, a second model call proposes up to three facts; a hard filter drops HR numbers, health details and anything about other people, and the rest is saved as one typed sentence, such as `[goal] Wants to become a tech lead.`
 
-Every memory type has to change what Attie does later. "Already knows how to request leave" means a one-line answer next time. An unsubmitted leave draft means the next conversation asks about it.
+Recall is selective: preferences always; unfinished tasks at the start of a conversation or when you ask what's outstanding; goals and focus for "what should I work on?"; anything else only if relevant. Every memory type has to change what Attie does next.
 
-## Before and after
+## Before and after, on real accounts
 
-[REAL USE — the centrepiece: what the three testers saw over 2–8 October. 3–5 anonymised before/after pairs from their "See answer without memory" screenshots and evidence lines, and the totals from docs/impact-report.md.]
+These are scripted test sessions on two real staff accounts in our company, not yet free use by colleagues.
 
-Before anyone else used it, I checked the mechanism with a script that runs real conversations through DeepSeek, with memories on the real Walrus relayer, and asks each question twice, with memory on and off. A judge model checks each answer against a written criterion. The latest run passed 10 of 10. That shows the memory is wired in correctly; whether it's useful is what the testers are for:
+**Remembering across sessions.** One employee mentioned once that they're learning Next.js, want to become a tech lead, and like short answers. In a new chat they asked, "What should I focus on learning next?"
 
-- With "prefers short answers" remembered, replies ran **29–43 words across four runs; without memory, 121–148.**
-- "Help me prepare for my performance review" turned two remembered wins into review points. Without memory, it started from scratch: "I don't have any of your past wins or goals saved".
-- "How many leave days do I have?" returned the live 20, ignoring an old memory that said 30.
-- Employee B asking about employee A's hobby got nothing back.
+- *With memory:* "Keep the Next.js momentum, but add one tech-lead skill on top… finish a Next.js project, then start leading small technical discussions."
+- *Same question via the app's "See answer without memory" button:* a generic list of troubleshooting, scripting and certifications, ending with "Tell me a bit more".
 
-In the app, every personalised reply has "See answer without memory", so testers see the comparison themselves.
+[SCREENSHOT: the "See answer without memory" comparison]
+
+**An unfinished task.** A second employee asked Attie to draft leave for 21–25 December and said, "I'll submit it later." Later, in a new chat, they asked only "What's my next shift?". Attie answered from the live roster, then added: *"did you get a chance to submit that Official Leave draft for 21–25 Dec?"* Nobody had mentioned leave in that chat.
+
+[SCREENSHOT: the unprompted follow-up]
+
+**HR beats memory.** The same employee said, "I think my leave balance is 20 days." Attie checked the live record and replied: 20 Official plus 5 Casual, so 25 in total. "The 20 days you're thinking of is your Official Leave."
+
+**Isolation.** The second account never saw anything the first employee had shared.
+
+[TESTER 3: achievements and performance review. Add the review answer with and without memory, plus one sentence from the tester in their own words.]
 
 ## What broke
 
-**Saves are slow.** A save takes 26–39 seconds. Attie answers at once and saves in the background, showing "saving…" until Walrus confirms. My first version said "Will remember" immediately, which overclaimed whenever a save failed.
+**Production failed where development never did.** On Render, every recall failed: "Cannot find package '@mysten/seal'". The SDK loads that peer dependency lazily, so the server started cleanly; a health check running one real recall found it.
 
-**You can't forget one memory.** The real SDK client has no per-memory delete (its test mock does), so I keep a table of forgotten IDs and filter every recall against it.
+**Saves take about 30 seconds.** Attie replies at once and saves in the background, showing "saving…" until Walrus confirms, or Retry if it fails. My first version said "Will remember" immediately, which was a lie whenever a save failed.
 
-**Relevance needed measuring.** My first similarity cutoff let through more unrelated memories than relevant ones. A small calibration on the real relayer moved it from 0.75 to 0.68.
+**There is no per-memory delete.** The SDK can't delete a single memory, so I keep a table of forgotten IDs and filter every recall against it.
 
-**A rule the model followed half the time.** "Follow up on open threads" in the system prompt worked about half the time. Naming the follow-up explicitly for that turn made it reliable.
-
-**Production failed in a way development never did.** Deployed on Render, every recall and save failed: "Cannot find package '@mysten/seal'". The SDK lists it as a peer dependency and only loads it on the first recall, so the server started fine. A health check that runs one real recall found it in minutes.
-
-**The first recall is slow.** After a restart it takes 7–10 seconds to set up its session, and the SDK gives each recall a fixed 15-second deadline. On a free host that sleeps, that matters. Attie now warms the session at startup, retries once, and falls back to the last good copy.
-
-DeepSeek caused no Walrus-specific friction; the SDK doesn't care which model you use. I skipped its auto-save middleware because it stores facts without letting me filter them first.
-
+**Relevant isn't the same as similar.** "What should I work on?" shares no words with "wants to become a tech lead", and in testing Attie claimed the employee had no goals. "Anything I still need to take care of?" missed the leave draft the same way. Guidance and "what's outstanding" questions now pull those memory types in directly.
 ## What I'd tell someone starting
 
-`remember()` and `recall()` worked on day one. The real work was deciding what deserves to be remembered, recalling as little as possible, and making saving and forgetting honest. If Walrus Memory disappeared tomorrow, Attie would still answer HR questions. But employees would be back to explaining their preferences, goals and unfinished work every single time.
+`remember()` and `recall()` worked on day one. The real work was deciding what deserves remembering, recalling as little as possible, and being honest about saving and forgetting. Without memory, Attie still answers HR questions, but employees are back to explaining themselves every time.
 
-[X POST: tag @WalrusProtocol, #WalrusMemory]
+[LIVE LINK / VIDEO: short screen recording of a cross-session recall]
+
+[X POST: tag @WalrusProtocol, #WalrusMemory, link this article]
