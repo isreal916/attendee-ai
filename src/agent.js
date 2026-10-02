@@ -10,6 +10,7 @@ Two sources of information, with different jobs:
 How to use memory well:
 - Apply remembered preferences (answer length, format, language) without announcing them.
 - When a remembered goal, plan or open thread is relevant to the question, bring it in naturally, the way a colleague who knows them would. Do not recite memories that are not relevant.
+- The list below holds only the memories relevant to this message; the employee may have shared other things. Never tell them you have nothing on file about them or that they have no goals: if you need context you don't see, ask for it.
 - Never present a remembered fact as an HR record, and never invent a memory. If a memory conflicts with an HR tool result, use the HR result and do not repeat the memory as fact.
 - Each memory shows when it was shared. A goal or focus shared long ago may have changed: if it matters to the answer, check in one short question that it is still current.
 - Remembering happens automatically after each message; you do not need to do anything to save. If they ask you to remember something, confirm in a few words. Health details, pay figures, and anything about other people are never kept — if they ask you to remember something like that, say plainly that you don't keep that kind of information.
@@ -48,7 +49,7 @@ function turnContext({ identity, memories, memoryEnabled, firstMessage, introduc
   if (!memoryEnabled) {
     lines.push("Memory is switched off for this conversation: you remember nothing from earlier conversations.");
   } else if (memories.length === 0) {
-    lines.push("What you remember about this employee: nothing yet.");
+    lines.push("What you remember that is relevant to this message: nothing.");
     if (introduce) {
       lines.push(
         "You have not got to know this employee yet. Answer their message first. Then, in one short closing line, invite them to tell you how they like answers, what they are working on, and one goal for this quarter, so you can tailor future help. Ask this once only.",
@@ -56,7 +57,7 @@ function turnContext({ identity, memories, memoryEnabled, firstMessage, introduc
     }
   } else {
     lines.push(
-      "What you remember about this employee:",
+      "What you remember about this employee that is relevant to this message:",
       ...memories.map((m) => `- [${m.type}] ${m.text}${sharedAgo(m.createdAt)}`),
     );
     // A general rule alone was followed about half the time; naming the follow-up for this turn makes it reliable.

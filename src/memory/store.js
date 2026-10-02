@@ -13,6 +13,10 @@ const MAX_PER_TURN = 6;
 const MAX_FOR_REVIEW = 10;
 const RECENT_MS = 15 * 60_000;
 const ASKS_ABOUT_REVIEW = /apprais|perform|review|self[- ]?assess|achiev|accomplish|\bwins?\b|proud|promot/i;
+// Open-ended guidance ("what should I work on?", "how can I grow?") is when goals and current
+// focus matter most, yet it rarely shares words with them, so similarity alone misses them.
+const ASKS_FOR_GUIDANCE =
+  /\b(what|which|how)\b.{0,40}\b(should|could|would|can)\b.{0,40}\b(work on|focus|learn|improve|grow|do|study|practi[cs]e|prioriti[sz]e)|\b(work on|focus on|learn next|improve|grow|career|develop|skills?|free time|spare time|plan my|priorit|next step|advice)\b/i;
 const ASKS_WHAT_IS_REMEMBERED = /\b(remember|know) about me\b|what do you (remember|know)/i;
 const LIST_QUERY = "everything known about this employee";
 // A recall that fails is tried once more after this pause (the relayer's first
@@ -240,11 +244,13 @@ export class MemoryStore {
     }
 
     const review = ASKS_ABOUT_REVIEW.test(query);
+    const guidance = ASKS_FOR_GUIDANCE.test(query);
     const ofType = (...types) => poolHits.filter((h) => types.includes(typeOf(h)));
     const ordered = [
       ...ofType("preference"),
       ...(firstMessage ? ofType("open_thread") : []),
       ...(review ? ofType("achievement", "goal") : []),
+      ...(guidance ? ofType("goal", "focus") : []),
       ...[...relevantHits].sort((a, b) => a.distance - b.distance),
     ];
     const { fromHits, pending } = await this.#visible(ns, ordered, {

@@ -334,3 +334,37 @@ test("resilience: a failed recall is retried, then the last good copy is used", 
   assert.equal(degraded, true);
   assert.deepEqual(texts(memories), ["Prefers short answers."]);
 });
+
+test("recall: an open-ended guidance question brings in goals and current focus", async () => {
+  const store = new MemoryStore({
+    client: MemWalMock.create(),
+    index: openIndex(":memory:"),
+    maxDistance: 0.05, // nothing passes the similarity filter, as with real phrasing that shares no words
+    retryDelayMs: 0,
+    log: { error() {} },
+  });
+  await store.save(ADA, { type: "preference", text: "Prefers short, practical answers." });
+  await store.save(ADA, { type: "goal", text: "Wants to eventually become a tech lead." });
+  await store.save(ADA, { type: "focus", text: "Is currently learning Next.js." });
+  await store.save(ADA, { type: "plan", text: "Wants the week of 21 December off." });
+  await store.settle();
+  const types = async (q) => (await store.recall(ADA, q)).memories.map((m) => m.type).sort();
+
+  for (const q of [
+    "I have some free time this week. What would be useful for me to work on?",
+    "What should I focus on learning next?",
+    "How can I grow in my role?",
+  ]) {
+    assert.deepEqual(await types(q), ["focus", "goal", "preference"], q);
+  }
+  // Not for an ordinary HR question.
+  assert.deepEqual(await types("When is my next shift?"), ["preference"]);
+});
+
+test("the model is told unlisted memories may exist, so it never claims there are none", async () => {
+  const store = newStore();
+  const llm = stubLlm();
+  await turn(store, llm, ADA, later("When is my next shift?"));
+  assert.match(llm.systems[0], /Never tell them you have nothing on file about them/);
+  assert.match(llm.systems[0], /relevant to this message: nothing/);
+});
