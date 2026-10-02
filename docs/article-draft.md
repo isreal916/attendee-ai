@@ -1,24 +1,24 @@
 # How to add memory to a support chatbot: an HR assistant that remembers employees between sessions
 
-*Draft. [SQUARE BRACKETS] = still to add before publishing. Target 500–800 words: the body is ~790 with all three testers. Real-use sections are scripted sessions on real staff accounts and say so; replace or add quotes if colleagues use it freely.*
+*Draft. [SQUARE BRACKETS] = still to add before publishing. Target 500–800 words (~790 now). Real-use sections are still scripted sessions on real staff accounts and say so. Before publishing: replace with the testers' own use over several days, 10+ memories each, numbers from docs/impact-report.md.*
 
 Every HR chatbot I have used has never met you. Ask "what should I learn next?" and it asks what your job is, every time. Start a leave request, close the tab, and it's gone.
 
-I work on AttendeeHRM, an HR system where employees check leave, shifts, attendance and pay. For Walrus Sessions 8 I built **Attie**, an assistant inside it that answers from live HR records and remembers each employee across conversations using Walrus Memory.
+I work on AttendeeHRM, an HR system for leave, shifts, attendance and pay. I built **Attie**, an assistant inside it that answers from live HR records and remembers each employee across conversations using Walrus Memory.
 
-**Stack:** DeepSeek (`deepseek-v4-pro`) through its OpenAI-compatible API, Node.js, the `@mysten-incubation/memwal` SDK, Postgres and Next.js. The code and setup steps are at https://github.com/isreal916/attendee-ai.
+Built with DeepSeek and Node.js; code and setup: https://github.com/isreal916/attendee-ai.
 
 ## One rule: HR records are live, memory is personal
 
 Leave balances, pay and job titles change and belong to the HR system, so Attie fetches them live and never stores them. Walrus holds what employees choose to share: answer style, goals, what they're learning, plans, unfinished tasks.
 
-On day one I typed "am the hr manager of this company". Attie answered correctly from my profile, then saved "Is the HR manager" as a memory. Right reply, wrong memory, so job titles are now blocked.
+On day one Attie saved "Is the HR manager" because I typed it. Right reply, wrong memory, so job titles are now blocked.
 
 ## How it works
 
 Each employee's namespace comes from their verified login: `attendee:{company}:{user}`. After each message, a second model call proposes up to three facts; a hard filter drops HR numbers, health details and anything about other people, and the rest is saved as one typed sentence, such as `[goal] Wants to become a tech lead.`
 
-Recall is selective: preferences always; unfinished tasks at the start of a conversation or when you ask what's outstanding; goals and focus for "what should I work on?"; anything else only if relevant. Every memory type has to change what Attie does next.
+Recall is selective: preferences always; unfinished tasks at the start of a conversation; goals for "what should I work on?"; anything else only if relevant.
 
 ## Before and after, on real accounts
 
@@ -27,7 +27,7 @@ These are scripted test sessions on three real staff accounts in our company, no
 **Remembering across sessions.** One employee mentioned once that they're learning Next.js, want to become a tech lead, and like short answers. In a new chat they asked, "What should I focus on learning next?"
 
 - *With memory:* "Keep the Next.js momentum, but add one tech-lead skill on top… finish a Next.js project, then start leading small technical discussions."
-- *Same question via the app's "See answer without memory" button:* a generic list of troubleshooting, scripting and certifications, ending with "Tell me a bit more".
+- *Via the app's "See answer without memory" button:* a generic list ending "Tell me a bit more".
 
 [SCREENSHOT: the "See answer without memory" comparison]
 
@@ -46,18 +46,22 @@ These are scripted test sessions on three real staff accounts in our company, no
 
 **Isolation.** Asked about "my leave plans", the third employee got "I don't have any leave plans from you", though a colleague's December leave is stored for the same company.
 
-## What broke
+## Model, runtime, and the Walrus Memory friction
 
-**Production failed where development never did.** On Render, every recall failed: "Cannot find package '@mysten/seal'". The SDK loads that peer dependency lazily, so the server started cleanly; a health check running one real recall found it.
+**Model:** DeepSeek `deepseek-v4-pro` for replies and `deepseek-flash` for choosing what to remember, via DeepSeek's OpenAI-compatible API. **Runtime:** Node.js 24 (Hono) on Render's free tier, MemWal SDK 0.1.8 on the staging relayer, Postgres on Neon. Walrus Memory never touches the model: I call `remember()` and `recall()` myself, and skipped the SDK's auto-save middleware so every fact passes my filter first.
 
-**Saves take about 30 seconds.** Attie replies at once and saves in the background, showing "saving…" until Walrus confirms, or Retry if it fails. My first version said "Will remember" immediately, which was a lie whenever a save failed.
+- **A dependency that fails only in production.** The default client imports `@mysten/seal` lazily, so Render started cleanly and then every recall failed. A health check that runs one real recall caught it.
+- **Saves take ~30 seconds, and a wait that gives up looks like a 504.** Attie replies at once and saves in the background, with idempotency keys so a retry never stores twice, and says "saving…" until Walrus confirms.
+- **No per-memory delete** in the real client (the mock has one), so forgotten IDs live in a table that filters every recall.
+- **A slow first recall** (7–10 s against a fixed 15 s deadline) on a host that sleeps; Attie warms up at start and retries once.
 
-**No per-memory delete.** So I keep a table of forgotten IDs and filter every recall against it.
+[ISSUE LINKS: MemWal GitHub issues once filed]
 
-**Relevant isn't the same as similar.** "What should I work on?" shares no words with "wants to become a tech lead", so in testing Attie claimed the employee had no goals; "anything I still need to take care of?" missed the leave draft. Guidance and "what's outstanding" questions now pull those memory types in directly.
+**My own bug: relevant isn't similar.** "What should I work on?" shares no words with "wants to become a tech lead", so Attie once said the employee had no goals. Such questions now pull goals in directly.
+
 ## What I'd tell someone starting
 
-`remember()` and `recall()` worked on day one. The real work was deciding what deserves remembering, recalling as little as possible, and being honest about saving and forgetting. Without memory, Attie still answers HR questions, but employees are back to explaining themselves every time.
+`remember()` and `recall()` worked on day one. The real work was deciding what deserves remembering, recalling as little as possible, and being honest about saving and forgetting.
 
 [LIVE LINK / VIDEO: short screen recording of a cross-session recall]
 
