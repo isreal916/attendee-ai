@@ -1,6 +1,6 @@
 # How to add memory to a support chatbot: an HR assistant that remembers employees between sessions
 
-*Draft. [SQUARE BRACKETS] = still to add before publishing. Target 500–800 words: the body is ~730 now, leaving ~70 for Tester 3. Real-use sections are scripted sessions on real staff accounts and say so; replace or add quotes if colleagues use it freely.*
+*Draft. [SQUARE BRACKETS] = still to add before publishing. Target 500–800 words: the body is ~790 with all three testers. Real-use sections are scripted sessions on real staff accounts and say so; replace or add quotes if colleagues use it freely.*
 
 Every HR chatbot I have used has never met you. Ask "what should I learn next?" and it asks what your job is, every time. Start a leave request, close the tab, and it's gone.
 
@@ -22,7 +22,7 @@ Recall is selective: preferences always; unfinished tasks at the start of a conv
 
 ## Before and after, on real accounts
 
-These are scripted test sessions on two real staff accounts in our company, not yet free use by colleagues.
+These are scripted test sessions on three real staff accounts in our company, not yet free use by colleagues.
 
 **Remembering across sessions.** One employee mentioned once that they're learning Next.js, want to become a tech lead, and like short answers. In a new chat they asked, "What should I focus on learning next?"
 
@@ -35,11 +35,16 @@ These are scripted test sessions on two real staff accounts in our company, not 
 
 [SCREENSHOT: the unprompted follow-up]
 
-**HR beats memory.** The same employee said, "I think my leave balance is 20 days." Attie checked the live record and replied: 20 Official plus 5 Casual, so 25 in total. "The 20 days you're thinking of is your Official Leave."
+**HR beats memory.** "I think my leave balance is 20 days" got the live record instead: 20 Official plus 5 Casual, 25 in total.
 
-**Isolation.** The second account never saw anything the first employee had shared.
+**Wins, ready for a review.** A third employee mentioned in passing that they'd automated the monthly payroll export and helped a new intern learn the reporting process. In a new chat they asked, "I have a performance review coming up. How should I prepare?"
 
-[TESTER 3: achievements and performance review. Add the review answer with and without memory, plus one sentence from the tester in their own words.]
+- *With memory:* the two wins as talking points, with what evidence to bring ("roughly how many hours per month it now saves").
+- *Without memory:* "tell me about your wins… What are you most proud of?"
+
+[QUOTE: one sentence from a tester in their own words, if they agree]
+
+**Isolation.** Asked about "my leave plans", the third employee got "I don't have any leave plans from you", though a colleague's December leave is stored for the same company.
 
 ## What broke
 
@@ -47,9 +52,9 @@ These are scripted test sessions on two real staff accounts in our company, not 
 
 **Saves take about 30 seconds.** Attie replies at once and saves in the background, showing "saving…" until Walrus confirms, or Retry if it fails. My first version said "Will remember" immediately, which was a lie whenever a save failed.
 
-**There is no per-memory delete.** The SDK can't delete a single memory, so I keep a table of forgotten IDs and filter every recall against it.
+**No per-memory delete.** So I keep a table of forgotten IDs and filter every recall against it.
 
-**Relevant isn't the same as similar.** "What should I work on?" shares no words with "wants to become a tech lead", and in testing Attie claimed the employee had no goals. "Anything I still need to take care of?" missed the leave draft the same way. Guidance and "what's outstanding" questions now pull those memory types in directly.
+**Relevant isn't the same as similar.** "What should I work on?" shares no words with "wants to become a tech lead", so in testing Attie claimed the employee had no goals; "anything I still need to take care of?" missed the leave draft. Guidance and "what's outstanding" questions now pull those memory types in directly.
 ## What I'd tell someone starting
 
 `remember()` and `recall()` worked on day one. The real work was deciding what deserves remembering, recalling as little as possible, and being honest about saving and forgetting. Without memory, Attie still answers HR questions, but employees are back to explaining themselves every time.
