@@ -4,6 +4,8 @@ export const config = {
   port: Number(env.PORT || 8787),
   // What the assistant calls itself — keep in step with the frontend.
   assistantName: env.ASSISTANT_NAME || "Attie",
+  // Where "today" and "yesterday" are judged, e.g. when telling the model how old a memory is.
+  timezone: env.COMPANY_TIMEZONE || "Africa/Lagos",
   corsOrigins: (env.CORS_ORIGINS || "http://localhost:3000").split(",").map((s) => s.trim()),
 
   // Model — any OpenAI-compatible chat API. DeepSeek by default; Groq if only GROQ_API_KEY is set.

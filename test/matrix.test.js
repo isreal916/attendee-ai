@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MemWalMock } from "@mysten-incubation/memwal";
-import { runTurn } from "../src/agent.js";
+import { runTurn, sharedAgo } from "../src/agent.js";
 import { createApp } from "../src/app.js";
 import { mockAdapter } from "../src/hr/mock.js";
 import { openIndex } from "../src/memory/index-db.js";
@@ -367,4 +367,14 @@ test("the model is told unlisted memories may exist, so it never claims there ar
   await turn(store, llm, ADA, later("When is my next shift?"));
   assert.match(llm.systems[0], /Never tell them you have nothing on file about them/);
   assert.match(llm.systems[0], /relevant to this message: nothing/);
+});
+
+test("memory age is counted in calendar days in the company timezone, not 24-hour periods", () => {
+  const at = (iso) => Date.parse(iso);
+  // Lagos is UTC+1: saved 23:00 on 1 Oct, asked 08:00 on 2 Oct — only 9 hours apart.
+  assert.equal(sharedAgo(at("2026-10-01T22:00:00Z"), at("2026-10-02T07:00:00Z")), " (shared yesterday)");
+  // Just after local midnight already counts as the next day.
+  assert.equal(sharedAgo(at("2026-10-01T22:30:00Z"), at("2026-10-01T23:15:00Z")), " (shared yesterday)");
+  assert.equal(sharedAgo(at("2026-10-02T07:00:00Z"), at("2026-10-02T20:00:00Z")), " (shared today)");
+  assert.equal(sharedAgo(at("2026-09-29T12:00:00Z"), at("2026-10-02T09:00:00Z")), " (shared 3 days ago)");
 });

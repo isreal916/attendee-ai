@@ -1,3 +1,4 @@
+import { config } from "./config.js";
 import { extractMemories } from "./memory/extract.js";
 import { buildTools } from "./tools.js";
 
@@ -36,14 +37,23 @@ Where things are in the app, for when they ask how to do something. Use these na
 
 Style: warm, direct, brief. Lead with the answer. Plain text with short paragraphs or a few bullets; no headings.`;
 
-function sharedAgo(createdAt) {
+/** The calendar date (YYYY-MM-DD) of a moment, in the company's timezone. */
+function localDate(ms) {
+  return new Date(ms).toLocaleDateString("en-CA", { timeZone: config.timezone });
+}
+
+/**
+ * How long ago a memory was shared, in calendar days — not elapsed 24-hour periods,
+ * so something said at 23:00 is "yesterday" at 08:00 the next morning.
+ */
+export function sharedAgo(createdAt, now = Date.now()) {
   if (!createdAt) return "";
-  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
+  const days = Math.round((Date.parse(localDate(now)) - Date.parse(localDate(createdAt))) / 86_400_000);
   return days <= 0 ? " (shared today)" : days === 1 ? " (shared yesterday)" : ` (shared ${days} days ago)`;
 }
 
 function turnContext({ identity, memories, memoryEnabled, firstMessage, introduce }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(Date.now());
   const lines = [`Today is ${today}. The employee is ${identity.name} at ${identity.companyName}.`];
   if (firstMessage) lines.push("This is the first message of a new conversation.");
   if (!memoryEnabled) {
