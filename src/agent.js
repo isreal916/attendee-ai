@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { weekdayOf } from "./dates.js";
 import { extractMemories } from "./memory/extract.js";
 import { buildTools } from "./tools.js";
 
@@ -35,6 +36,8 @@ Where things are in the app, for when they ask how to do something. Use these na
 - Profile, Security tab: password and two-factor settings
 - AI Assistant: this chat, and the list of what you remember about them
 
+Dates: use the weekday given with a date (in "Today is" or in tool results); never work out a weekday yourself. If none is given, give the date without one.
+
 Style: warm, direct, brief. Lead with the answer. Plain text with short paragraphs or a few bullets; no headings.`;
 
 /** The calendar date (YYYY-MM-DD) of a moment, in the company's timezone. */
@@ -54,7 +57,7 @@ export function sharedAgo(createdAt, now = Date.now()) {
 
 function turnContext({ identity, memories, memoryEnabled, firstMessage, introduce }) {
   const today = localDate(Date.now());
-  const lines = [`Today is ${today}. The employee is ${identity.name} at ${identity.companyName}.`];
+  const lines = [`Today is ${weekdayOf(today)} ${today}. The employee is ${identity.name} at ${identity.companyName}.`];
   if (firstMessage) lines.push("This is the first message of a new conversation.");
   if (!memoryEnabled) {
     lines.push("Memory is switched off for this conversation: you remember nothing from earlier conversations.");

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { weekdayOf } from "../dates.js";
 
 /**
  * AttendeeHRM adapter — reads live HR data from the existing AttendeeHRM API
@@ -232,10 +233,12 @@ export function createAttendeeHrmAdapter({ apiUrl, fetchImpl = fetch, log = cons
       );
       const data = json?.data ?? json ?? {};
       assertMine(data, identity, "a shift roster");
-      const day = (d) =>
-        !d || (!d.display && !d.clockin)
-          ? { date: String(d?.date ?? "").slice(0, 10), off: true }
-          : { date: String(d.date ?? "").slice(0, 10), clock_in: d.clockin, clock_out: d.clockout, hours: num(d.hours) };
+      const day = (d) => {
+        const date = String(d?.date ?? "").slice(0, 10);
+        return !d || (!d.display && !d.clockin)
+          ? { date, weekday: weekdayOf(date), off: true }
+          : { date, weekday: weekdayOf(date), clock_in: d.clockin, clock_out: d.clockout, hours: num(d.hours) };
+      };
       // Month totals are counted here from the roster, so the model reports them instead of estimating.
       const monthDays = (Array.isArray(data.all_shifts) ? data.all_shifts : []).map(day);
       const worked = monthDays.filter((d) => !d.off);

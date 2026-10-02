@@ -5,6 +5,7 @@
  *
  * Sign in with `Authorization: Bearer demo-ada` (or demo-tunde, demo-ngozi).
  */
+import { weekdayOf } from "../dates.js";
 
 // DEMO_COMPANY_ID gives a test run its own memory namespaces, so earlier runs cannot affect it.
 const COMPANY = { companyId: process.env.DEMO_COMPANY_ID || "demo", companyName: "Lumen Logistics (demo)" };
@@ -115,8 +116,8 @@ export const mockAdapter = {
       const off = e.shift.off.includes(date.getDay());
       days.push(
         off
-          ? { date: dateKey(date), off: true }
-          : { date: dateKey(date), shift: e.shift.name, clock_in: e.shift.in, clock_out: e.shift.out },
+          ? { date: dateKey(date), weekday: weekdayOf(dateKey(date)), off: true }
+          : { date: dateKey(date), weekday: weekdayOf(dateKey(date)), shift: e.shift.name, clock_in: e.shift.in, clock_out: e.shift.out },
       );
     }
     return { shift_name: e.shift.name, days };

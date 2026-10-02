@@ -175,3 +175,24 @@ test("shift totals for the month are counted from the roster", async () => {
   assert.equal(shifts.days_off_in_month, 1);
   assert.equal(shifts.hours_in_month, 16);
 });
+
+test("every shift date carries its weekday, so the model never works one out", async () => {
+  const { adapter } = backend({
+    ...profileRoute,
+    "/getmyshifts": () => ({
+      data: {
+        userid: 41, shiftname: "General",
+        upcoming_shifts: [
+          { date: "2026-10-03", clockin: "09:00 AM", clockout: "05:00 PM", hours: 8, display: "9-5" },
+          { date: "2026-10-04" },
+        ],
+      },
+    }),
+  });
+  const identity = await adapter.resolveIdentity(ADA_TOKEN);
+  const shifts = await adapter.getShifts(identity, { month: "2026-10" });
+  assert.deepEqual(shifts.upcoming.map((d) => [d.date, d.weekday]), [
+    ["2026-10-03", "Saturday"],
+    ["2026-10-04", "Sunday"],
+  ]);
+});

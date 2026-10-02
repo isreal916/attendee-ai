@@ -411,3 +411,11 @@ test("the model is told a drafted leave request is not in the HR system", async 
   await turn(store, llm, ADA, later("When is my next shift?"));
   assert.match(llm.systems[0], /There is no saved draft in Requests/);
 });
+
+test("today's weekday is given to the model, and it is told never to work one out", async () => {
+  const store = newStore();
+  const llm = stubLlm();
+  await turn(store, llm, ADA, later("When is my next shift?"));
+  assert.match(llm.systems[0], /Today is (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{4}-\d{2}-\d{2}\./);
+  assert.match(llm.systems[0], /never work out a weekday yourself/);
+});
