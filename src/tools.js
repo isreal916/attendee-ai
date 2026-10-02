@@ -74,7 +74,10 @@ export function buildTools(adapter, identity, trace) {
       }),
       async (input) => {
         trace.actions.push({ type: "leave_request_draft", ...input });
-        return { drafted: true, note: "Shown to the employee as a form to review and submit. Not submitted." };
+        return {
+          drafted: true,
+          note: "Shown in this chat only, with a link to the Requests page where they enter and submit it. Nothing is saved in the HR system.",
+        };
       },
     ),
   ];

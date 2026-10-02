@@ -378,3 +378,36 @@ test("memory age is counted in calendar days in the company timezone, not 24-hou
   assert.equal(sharedAgo(at("2026-10-02T07:00:00Z"), at("2026-10-02T20:00:00Z")), " (shared today)");
   assert.equal(sharedAgo(at("2026-09-29T12:00:00Z"), at("2026-10-02T09:00:00Z")), " (shared 3 days ago)");
 });
+
+test("recall: asking what is still outstanding brings in open threads and plans, mid-conversation", async () => {
+  const store = new MemoryStore({
+    client: MemWalMock.create(),
+    index: openIndex(":memory:"),
+    maxDistance: 0.05, // nothing passes the similarity filter, as with real phrasing that shares no words
+    retryDelayMs: 0,
+    log: { error() {} },
+  });
+  await store.save(ADA, { type: "preference", text: "Prefers to be addressed as Kanis." });
+  await store.save(ADA, { type: "open_thread", text: "Drafted a leave request for 2026-12-21 to 2026-12-25; not yet submitted." });
+  await store.save(ADA, { type: "plan", text: "Wants the week of 21 December off." });
+  await store.save(ADA, { type: "goal", text: "Wants to eventually become a tech lead." });
+  await store.settle();
+  const types = async (q) => (await store.recall(ADA, q)).memories.map((m) => m.type).sort();
+
+  for (const q of [
+    "Is there anything I still need to take care of?",
+    "Do I have anything pending?",
+    "What's outstanding on my to-do?",
+  ]) {
+    assert.deepEqual(await types(q), ["open_thread", "plan", "preference"], q);
+  }
+  // Not for an ordinary HR question mid-conversation.
+  assert.deepEqual(await types("When is my next shift?"), ["preference"]);
+});
+
+test("the model is told a drafted leave request is not in the HR system", async () => {
+  const store = newStore();
+  const llm = stubLlm();
+  await turn(store, llm, ADA, later("When is my next shift?"));
+  assert.match(llm.systems[0], /Never say the request is waiting in Requests/);
+});
