@@ -1,6 +1,6 @@
 # Live trust checklist
 
-Run these against the **deployed** system before submission, with two real AttendeeHRM employee accounts (**A** and **B**) on the AI Assistant page. Each case also has an automated equivalent that runs on every `npm test` (named in brackets), so this checklist is about confirming the same behaviour on the live stack: real login, real AttendeeHRM data, real Walrus.
+`npm run check:trust` runs most of these automatically through the API with two employees (see the top of `scripts/trust-check.mjs`; results in [trust-results.md](trust-results.md)). Run them by hand against the **deployed** system before submission, with two real AttendeeHRM employee accounts (**A** and **B**) on the AI Assistant page. Each case also has an automated equivalent that runs on every `npm test` (named in brackets), so this checklist is about confirming the same behaviour on the live stack: real login, real AttendeeHRM data, real Walrus.
 
 Record the result and a screenshot for each. "Memory panel" means the *What Attie remembers* panel on the AI Assistant page.
 

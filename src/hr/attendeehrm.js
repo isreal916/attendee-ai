@@ -162,7 +162,10 @@ export function createAttendeeHrmAdapter({ apiUrl, fetchImpl = fetch, log = cons
       const started = r.empdate && !String(r.empdate).startsWith("1970-01-01") ? String(r.empdate).slice(0, 10) : null;
       return {
         name: r.name ?? identity.name,
-        role: r.designation || r.grade || r.rolename || r.usertype || null,
+        // The job title is the designation only. A grade is a pay or seniority band, not a title,
+        // so it is reported separately; null tells the model the record has no title.
+        job_title: r.designation || null,
+        grade: r.grade || null,
         department: r.department ?? null,
         branch: r.location ?? null,
         employment_type: r.emptype ?? null,

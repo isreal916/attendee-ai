@@ -18,7 +18,8 @@
     "migrate:index": "node --env-file-if-exists=.env scripts/migrate-index.mjs",
     "report:usage": "node --env-file-if-exists=.env scripts/report-usage.mjs",
     "eval:behaviour": "node --env-file-if-exists=.env scripts/eval-behaviour.mjs",
-    "calibrate:recall": "node --env-file-if-exists=.env scripts/calibrate-recall.mjs"
+    "calibrate:recall": "node --env-file-if-exists=.env scripts/calibrate-recall.mjs",
+    "check:trust": "node scripts/trust-check.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",

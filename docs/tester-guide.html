@@ -92,278 +92,179 @@ footer { color: var(--muted); font-size: 0.85rem; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .kick { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-.kick ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; }
+.kick ul, .kick ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; }
 .sheet { overflow-x: auto; }
 .sheet table { border-collapse: collapse; min-width: 34rem; width: 100%; font-size: 0.9rem; }
 .sheet th, .sheet td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
 .sheet th { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
-.sheet td { height: 2.2rem; }
-.story { font-size: 0.8rem; color: var(--accent-ink); font-weight: 600; }
+.sheet td { height: 2rem; }
+.story { font-size: 0.85rem; color: var(--accent-ink); font-weight: 600; }
+.step { color: var(--ink); }
+.msg { grid-template-columns: 1fr auto; }
 </style>
 <div class="wrap">
   <header style="display:grid;gap:12px">
-    <span class="eyebrow">AttendeeHRM · Attie testing, 2–8 October</span>
-    <h1>Help Attie get to know you</h1>
-    <p class="lede">Attie is the HR assistant in AttendeeHRM. It answers from your live HR records and remembers what you tell it about how you work, so you don't have to start from zero every time. This week we want to find out whether that memory actually makes it more useful to you.</p>
+    <span class="eyebrow">AttendeeHRM · Attie real-user testing</span>
+    <h1>Attie real-user testing script</h1>
+    <p class="lede">You are testing Attie as a real employee, not trying to make the system pass. The goal is to find out whether persistent memory actually improves the employee experience. Don't praise Attie artificially or force a memory to be created: use natural language and let Attie decide what is worth remembering.</p>
   </header>
-  <section class="facts" aria-label="At a glance">
-    <div class="fact"><b>About 10 minutes a day</b><span>Seven days, plus a 5-minute kickoff</span></div>
-    <div class="fact"><b>Your own login</b><span><a href="https://attendeehrm.vercel.app/kcysoft/login">attendeehrm.vercel.app</a> → AI Assistant</span></div>
-    <div class="fact"><b>One track each</b><span>Pick the one closest to your real work</span></div>
+  <section class="kick">
+    <h2>Before you start</h2>
+    <ul>
+      <li>Use your own AttendeeHRM account: sign in at <a href="https://attendeehrm.vercel.app/kcysoft/login">attendeehrm.vercel.app/kcysoft/login</a> and open <i>AI Assistant</i>.</li>
+      <li>A Walrus save takes about 30 seconds. After you share something, wait until the note under the reply changes from <i>saving…</i> to <i>Saved to your memory</i> before starting a new conversation.</li>
+      <li>The first message can take up to a minute if nobody has used Attie for a while.</li>
+      <li>There's no command to list memories: the <i>What Attie remembers</i> panel on the right shows everything, and lets you correct (pencil) or forget (bin) any memory.</li>
+      <li>Click <i>Helpful</i> under a reply when what Attie remembered genuinely helped. It only counts the click.</li>
+      <li>Don't screenshot private HR information unnecessarily.</li>
+    </ul>
+  </section>
+  <nav class="switch" role="tablist" aria-label="Choose your scenario">
+    <span class="label">Your scenario:</span>
+    <button class="tab" role="tab" id="tab-1" aria-controls="track-1" data-track="1">Tester 1 · Preference + goal</button>
+    <button class="tab" role="tab" id="tab-2" aria-controls="track-2" data-track="2">Tester 2 · Unfinished leave request</button>
+    <button class="tab" role="tab" id="tab-3" aria-controls="track-3" data-track="3">Tester 3 · Achievements + performance review</button>
+  </nav>
+  <section class="track" id="track-1" role="tabpanel" aria-labelledby="tab-1">
+    <div class="track-head">
+      <h2>Tester 1 · Preference + goal</h2>
+      <span class="story">“It knows how I like to work.”</span>
+      <p>Test whether Attie remembers a personal preference and a longer-term goal, then uses both later without the employee repeating them.</p>
+    </div>
+    <div class="day" data-day="t1-0">
+      <div class="day-head"><h3>Conversation 1</h3></div>
+      <div class="msg"><q>I'm currently learning Next.js and my goal is to eventually become a tech lead. Also, I prefer short, practical answers rather than long explanations.</q><button class="copy">Copy</button></div>
+      <p class="step">Then continue naturally with:</p>
+      <div class="msg"><q>What should I focus on improving at work this quarter?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Observe whether Attie responds appropriately. Wait until the note under the reply says <i>Saved to your memory</i> (about 30 seconds) before moving on.</p>
+    </div>
+    <div class="day" data-day="t1-1">
+      <div class="day-head"><h3>New conversation</h3></div>
+      <p class="step">Start a <b>new conversation</b>: click <i>New chat</i>. Don't tell Attie this is a test.</p>
+      <div class="msg"><q>I have some free time this week. What would be useful for me to work on?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Observe whether Attie uses your learning focus, your career goal and your answer preference without you repeating them.</p>
+    </div>
+    <div class="day" data-day="t1-2">
+      <div class="day-head"><h3>Memory check</h3></div>
+      <p class="step">To check what was remembered, open the <i>What Attie remembers</i> panel on the right of the AI Assistant page. Confirm that useful memories were created.</p>
+    </div>
+    <div class="day" data-day="t1-3">
+      <div class="day-head"><h3>Before / after</h3></div>
+      <div class="msg"><q>What should I focus on learning next?</q><button class="copy">Copy</button></div>
+      <p class="step">Capture the personalised answer. Then click <i>See answer without memory</i> under it, and capture both responses.</p>
+    </div>
+    <div class="day">
+      <div class="day-head"><h3>Screenshots to capture</h3></div>
+      <ol><li>The original conversation where the preference and goal were stated.</li><li>The new conversation where Attie uses them without being reminded.</li><li>The before/after comparison.</li><li>The memory panel showing the stored memories.</li></ol>
+      <label class="done-row"><input type="checkbox" id="done-t1"> Scenario done</label>
+    </div>
+  </section>
+  <section class="track" id="track-2" role="tabpanel" aria-labelledby="tab-2" hidden>
+    <div class="track-head">
+      <h2>Tester 2 · Unfinished leave request</h2>
+      <span class="story">“It remembers what I left unfinished.”</span>
+      <p>Test whether Attie remembers something the employee started but did not finish.</p>
+    </div>
+    <div class="day" data-day="t2-0">
+      <div class="day-head"><h3>Conversation 1</h3></div>
+      <div class="msg"><q>I'd like to take annual leave from December 21st to December 25th. Can you help me draft the request?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Let Attie use your real HR data where it needs to (for example your leave balance).</p>
+      <p class="step">Then say:</p>
+      <div class="msg"><q>This looks good. I'll submit it later.</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Do <b>not</b> submit the request, and don't say you've submitted it: that tells Attie the task is done. Wait until the note says <i>Saved to your memory</i>.</p>
+    </div>
+    <div class="day" data-day="t2-1">
+      <div class="day-head"><h3>New conversation</h3></div>
+      <p class="step">Start a <b>new conversation</b>: click <i>New chat</i>. Don't tell Attie this is a test.</p>
+      <div class="msg"><q>What's my next shift?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Let Attie answer from your live HR data. Notice whether it brings up the unfinished leave request on its own.</p>
+      <p class="step">Then ask naturally:</p>
+      <div class="msg"><q>Is there anything I still need to take care of?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Observe whether Attie remembers the unfinished leave request.</p>
+    </div>
+    <div class="day" data-day="t2-2">
+      <div class="day-head"><h3>Follow-up</h3></div>
+      <div class="msg"><q>What was the leave request I was working on?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Attie should identify the unfinished request.</p>
+    </div>
+    <div class="day" data-day="t2-3">
+      <div class="day-head"><h3>Memory check</h3></div>
+      <p class="step">Open the <i>What Attie remembers</i> panel on the right of the AI Assistant page. Confirm the unfinished request is listed under <i>Unfinished things</i>.</p>
+    </div>
+    <div class="day">
+      <div class="day-head"><h3>Screenshots to capture</h3></div>
+      <ol><li>The original leave-draft conversation.</li><li>The new conversation where Attie brings up the unfinished request.</li><li>The memory entry showing the unfinished request.</li><li>If useful, the live HR answer, showing Attie combining what is true now (HR data) with what you were working on (memory).</li></ol>
+      <label class="done-row"><input type="checkbox" id="done-t2"> Scenario done</label>
+    </div>
+  </section>
+  <section class="track" id="track-3" role="tabpanel" aria-labelledby="tab-3" hidden>
+    <div class="track-head">
+      <h2>Tester 3 · Achievements + performance review</h2>
+      <span class="story">“It remembers what I've accomplished.”</span>
+      <p>Test whether Attie remembers meaningful work achievements and later uses them to give more personal career support.</p>
+    </div>
+    <div class="day" data-day="t3-0">
+      <div class="day-head"><h3>Conversation 1</h3></div>
+      <div class="msg"><q>I automated our monthly payroll export today. It used to take me a lot of manual work.</q><button class="copy">Copy</button></div>
+      <p class="step">Continue:</p>
+      <div class="msg"><q>I also helped a new intern understand our reporting process.</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Let Attie respond normally. Wait until both notes say <i>Saved to your memory</i>.</p>
+    </div>
+    <div class="day" data-day="t3-1">
+      <div class="day-head"><h3>New conversation</h3></div>
+      <p class="step">Start a <b>new conversation</b>: click <i>New chat</i>. Don't tell Attie this is a test.</p>
+      <div class="msg"><q>I have a performance review coming up. How should I prepare?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Don't mention your earlier achievements. Observe whether Attie uses them to make the advice specific.</p>
+    </div>
+    <div class="day" data-day="t3-2">
+      <div class="day-head"><h3>Follow-up</h3></div>
+      <div class="msg"><q>What accomplishments have I mentioned before that could be useful for my review?</q><button class="copy">Copy</button></div>
+      <p class="look"><b>Look for:</b> Observe whether Attie brings up the remembered work.</p>
+    </div>
+    <div class="day" data-day="t3-3">
+      <div class="day-head"><h3>Before / after</h3></div>
+      <p class="step">Under the review-preparation answer, click <i>See answer without memory</i> and compare the generic response with the personal one.</p>
+    </div>
+    <div class="day">
+      <div class="day-head"><h3>Screenshots to capture</h3></div>
+      <ol><li>The original conversation containing the achievements.</li><li>The new performance-review conversation.</li><li>The personal answer that refers to your earlier achievements.</li><li>The memory panel showing the achievement memories (under <i>Your wins</i>).</li><li>The before/after comparison, if the difference is meaningful.</li></ol>
+      <label class="done-row"><input type="checkbox" id="done-t3"> Scenario done</label>
+    </div>
   </section>
   <section class="kick">
-    <h2>Day 0 · Five-minute kickoff</h2>
-    <p>Before you start, jot down a few true things about your work. You'll use them in place of the examples in the guide, so Attie learns about the real you.</p>
-    <ul>
-      <li>What you're working on or learning right now</li>
-      <li>One goal for this quarter</li>
-      <li>How you like answers (short or detailed, any format)</li>
-      <li>Something coming up: time off, a course, a deadline</li>
-      <li>One or two things you've done recently that you're proud of</li>
-    </ul>
-    <p class="tally">Keep this note to yourself. Only share with Attie what you're comfortable with.</p>
+    <h2>Trust test: everyone, don't skip</h2>
+    <p>After your main scenario, do at least one of these.</p>
+    <h3>Memory isolation</h3>
+    <p>Tester 1 must not be able to retrieve Tester 2's memories. Tester 1 asks:</p>
+    <div class="msg"><q>What do you remember about my leave plans?</q><button class="copy">Copy</button></div>
+    <p class="look">The answer must only use Tester 1's own memory.</p>
+    <h3>HR authority</h3>
+    <p>If appropriate, say something that conflicts with your HR data, for example:</p>
+    <div class="msg"><q>I think my leave balance is 20 days.</q><button class="copy">Copy</button></div>
+    <p class="look">Attie should use your actual HR record, not your statement. Don't change real HR records to do this test.</p>
+    <h3>Memory controls</h3>
+    <p>Open the <i>What Attie remembers</i> panel on the right of the AI Assistant page, then correct or forget a memory where appropriate.</p>
+    <p class="look">Ask about it again and check that the forgotten memory is no longer used.</p>
+  </section>
+  <section class="kick">
+    <h2>Don't</h2>
+    <ul><li>Tell Attie exactly what memory to create.</li><li>Repeatedly say "remember this".</li><li>Ask leading questions such as "Do you remember that I like short answers?"</li><li>Pretend something happened when it didn't.</li><li>Repeat the same information in every conversation.</li><li>Praise Attie simply because it remembered something.</li><li>Manufacture a successful result.</li></ul>
+    <p class="tally">The goal is to see whether memory works naturally.</p>
   </section>
   <section style="display:grid;gap:12px">
-    <h2>Before you start</h2>
-    <ul class="rules">
-      <li><span><b>Be yourself.</b> The parts in <span class="fill">brackets</span> are examples. Replace them with things that are true for you, using what you noted at the kickoff, and change any line that doesn't fit. Real answers are the whole point.</span></li>
-      <li><span><b>Start a new chat each day</b> with the <i>New chat</i> button. Attie should still remember you: that's what we're testing.</span></li>
-      <li><span><b>Keep it work-related.</b> Don't share health details, pay, passwords or anything about colleagues. Attie is built not to keep those, but there's no need to test it.</span></li>
-      <li><span><b>The first message can take up to a minute</b> if nobody has used Attie for a while. After that it's quicker.</span></li>
-      <li><span><b>Click <i>Helpful</i></b> under a reply when what Attie remembered actually helped you. It only counts the click.</span></li>
-      <li><span><b>Write one evidence line a day</b> (see below), and take a screenshot wherever you see <span class="shot">Screenshot</span>.</span></li>
-      <li><span><b>You're in control.</b> The panel on the right of the AI Assistant page shows everything Attie remembers. You can correct or forget anything, any time.</span></li>
-    </ul>
-  </section>
-  <nav class="switch" role="tablist" aria-label="Choose your track">
-    <span class="label">Your track:</span>
-    <button class="tab" role="tab" id="tab-a" aria-controls="track-a" data-track="a">Learning something new</button>
-    <button class="tab" role="tab" id="tab-b" aria-controls="track-b" data-track="b">Shifts &amp; operations</button>
-    <button class="tab" role="tab" id="tab-c" aria-controls="track-c" data-track="c">Growing into leadership</button>
-  </nav>
-  <!-- ============================== TRACK A ============================== -->
-  <section class="track" id="track-a" role="tabpanel" aria-labelledby="tab-a">
-    <div class="track-head">
-      <h2>Learning something new</h2>
-      <p>For someone fairly new to their role, or picking up a new skill. Attie should tailor what-to-learn advice to you and keep track of your progress.</p>
-    </div>
-    <div class="day" data-day="a1">
-      <div class="day-head"><h3>Day 1 · Introduce yourself</h3><span class="when">Thu 2 Oct</span></div>
-      <span class="story">Preference and goal</span>
-      <div class="msg"><q>Please keep your answers <span class="fill">short, with bullet points</span>.</q><button class="copy">Copy</button><span class="kind">A preference: shapes every reply from now on</span></div>
-      <div class="msg"><q>My goal this quarter is to <span class="fill">ship my first feature on my own</span>.</q><button class="copy">Copy</button><span class="kind">A goal</span></div>
-      <div class="msg"><q>How many leave days do I have left?</q><button class="copy">Copy</button><span class="kind">Live HR data, never stored in memory</span></div>
-      <p class="look"><b>Look for:</b> Under your messages, <i>I'll remember that · saving…</i> changes to <i>Saved to your memory</i> within a minute. <span class="shot">Screenshot</span> the memory panel.</p>
-      <label class="done-row"><input type="checkbox" id="done-a1"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a2">
-      <div class="day-head"><h3>Day 2 · An HR question, and what you're working on</h3><span class="when">Fri 3 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story A: your preference, without repeating it</span>
-      <div class="msg"><q>I'm currently learning <span class="fill">Next.js</span>. It's my main focus this month.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <div class="msg"><q>I work best <span class="fill">in the mornings, before noon</span>.</q><button class="copy">Copy</button><span class="kind">A working preference</span></div>
-      <div class="msg"><q>What should I focus on learning this week?</q><button class="copy">Copy</button><span class="kind">Should build on what you're learning, in your style</span></div>
-      <p class="look"><b>Look for:</b> A short answer that builds on what you're learning, without you repeating it. Click <i>See answer without memory</i> under it. <span class="shot">Screenshot</span> both answers. Note one line on the difference.</p>
-      <label class="done-row"><input type="checkbox" id="done-a2"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a3">
-      <div class="day-head"><h3>Day 3 · Start something unfinished</h3><span class="when">Sat 4 Oct (or Mon 6)</span><span class="new-chat">New chat first</span></div>
-      <span class="story">An open thread</span>
-      <div class="msg"><q>Can I take <span class="fill">Friday 17 October</span> off? Please draft the request.</q><button class="copy">Copy</button><span class="kind">Attie drafts it. Don't submit it yet</span></div>
-      <div class="msg"><q>I'm working on <span class="fill">the customer dashboard project</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <label class="done-row"><input type="checkbox" id="done-a3"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a4">
-      <div class="day-head"><h3>Day 4 · The follow-up</h3><span class="when">The next day you use it</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story B: Attie knows something is unfinished</span>
-      <div class="msg"><q>When is my next shift?</q><button class="copy">Copy</button><span class="kind">Any first question works</span></div>
-      <p class="look"><b>Look for:</b> Attie answers, then asks whether you submitted the leave request you drafted. <span class="shot">Screenshot</span> it, then answer honestly.</p>
-      <div class="msg"><q>I already know how to request leave in the app.</q><button class="copy">Copy</button><span class="kind">Something you already know</span></div>
-      <label class="done-row"><input type="checkbox" id="done-a4"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a5">
-      <div class="day-head"><h3>Day 5 · Your wins</h3><span class="when">Mon 6 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Wins build up</span>
-      <div class="msg"><q>This week I <span class="fill">finished my first code review</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I <span class="fill">fixed the login page bug</span> and it went live.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I <span class="fill">learned the basics of Docker</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I learn best from <span class="fill">short video tutorials</span>.</q><button class="copy">Copy</button><span class="kind">A preference</span></div>
-      <label class="done-row"><input type="checkbox" id="done-a5"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a6">
-      <div class="day-head"><h3>Day 6 · Normal HR use</h3><span class="when">Tue 7 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Personal, without getting in the way</span>
-      <div class="msg"><q>How was my attendance this month?</q><button class="copy">Copy</button><span class="kind">Live HR data</span></div>
-      <div class="msg"><q>How do I request leave?</q><button class="copy">Copy</button><span class="kind">Should be brief: you said you already know</span></div>
-      <div class="msg"><q>I'd like <span class="fill">a mentor in frontend architecture</span>.</q><button class="copy">Copy</button><span class="kind">A goal</span></div>
-      <div class="msg"><q>I'd like to take <span class="fill">a week off at the end of the year</span>.</q><button class="copy">Copy</button><span class="kind">A plan</span></div>
-      <label class="done-row"><input type="checkbox" id="done-a6"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="a7">
-      <div class="day-head"><h3>Day 7 · Review or planning</h3><span class="when">Wed 8 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story C: your week comes together</span>
-      <div class="msg"><q>What should I learn after <span class="fill">Next.js</span>? Help me plan the next two weeks.</q><button class="copy">Copy</button><span class="kind">Should connect your focus, goals, wins and learning style</span></div>
-      <p class="look"><b>Look for:</b> Click <i>See answer without memory</i>. <span class="shot">Screenshot</span> both. This is the before/after for your track.</p>
-      <div class="msg"><q>What do you remember about me?</q><button class="copy">Copy</button><span class="kind">A summary of your week</span></div>
-      <div class="msg"><q>Actually, I now prefer <span class="fill">more detailed answers</span>.</q><button class="copy">Copy</button><span class="kind">A correction: the old preference should stop being used</span></div>
-      <p class="look"><b>Look for:</b> In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. <span class="shot">Screenshot</span> the panel before and after.</p>
-      <label class="done-row"><input type="checkbox" id="done-a7"> Done, and evidence line written</label>
-    </div>
-  </section>
-  <!-- ============================== TRACK B ============================== -->
-  <section class="track" id="track-b" role="tabpanel" aria-labelledby="tab-b" hidden>
-    <div class="track-head">
-      <h2>Shifts &amp; operations</h2>
-      <p>For someone whose day revolves around shifts, attendance and planning time off. Attie should learn your constraints and plans so its answers fit your real week.</p>
-    </div>
-    <div class="day" data-day="b1">
-      <div class="day-head"><h3>Day 1 · Introduce yourself</h3><span class="when">Thu 2 Oct</span></div>
-      <span class="story">Preference and goal</span>
-      <div class="msg"><q>Please reply in <span class="fill">simple, short sentences</span>.</q><button class="copy">Copy</button><span class="kind">A preference: shapes every reply from now on</span></div>
-      <div class="msg"><q>I prefer <span class="fill">early shifts</span>, and I need to <span class="fill">leave by 4pm on weekdays</span>.</q><button class="copy">Copy</button><span class="kind">A working preference (the constraint, not the reason)</span></div>
-      <div class="msg"><q>My goal this quarter is to <span class="fill">have no late arrivals</span>.</q><button class="copy">Copy</button><span class="kind">A goal</span></div>
-      <div class="msg"><q>When is my next shift?</q><button class="copy">Copy</button><span class="kind">Live HR data</span></div>
-      <p class="look"><b>Look for:</b> <i>I'll remember that · saving…</i> changes to <i>Saved to your memory</i>. <span class="shot">Screenshot</span> the memory panel.</p>
-      <label class="done-row"><input type="checkbox" id="done-b1"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b2">
-      <div class="day-head"><h3>Day 2 · An HR question, and what you're working on</h3><span class="when">Fri 3 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story A: your preference, without repeating it</span>
-      <div class="msg"><q>I'm learning <span class="fill">Excel for stock reports</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <div class="msg"><q>I like a reminder <span class="fill">a day before my shifts change</span>.</q><button class="copy">Copy</button><span class="kind">A preference</span></div>
-      <div class="msg"><q>How was my attendance this month?</q><button class="copy">Copy</button><span class="kind">Live numbers, framed around your goal, in your style</span></div>
-      <p class="look"><b>Look for:</b> Click <i>See answer without memory</i> under the attendance answer. <span class="shot">Screenshot</span> both. Note one line on the difference.</p>
-      <label class="done-row"><input type="checkbox" id="done-b2"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b3">
-      <div class="day-head"><h3>Day 3 · Start something unfinished</h3><span class="when">Sat 4 Oct (or Mon 6)</span><span class="new-chat">New chat first</span></div>
-      <span class="story">An open thread</span>
-      <div class="msg"><q>I want to take <span class="fill">the week of 22 December</span> off. Please draft the request.</q><button class="copy">Copy</button><span class="kind">Attie checks your balance and drafts it. Don't submit it yet</span></div>
-      <div class="msg"><q>I'd like to <span class="fill">swap to more morning shifts next month</span>.</q><button class="copy">Copy</button><span class="kind">A plan</span></div>
-      <label class="done-row"><input type="checkbox" id="done-b3"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b4">
-      <div class="day-head"><h3>Day 4 · The follow-up</h3><span class="when">The next day you use it</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story B: Attie knows something is unfinished</span>
-      <div class="msg"><q>Do I work this weekend?</q><button class="copy">Copy</button><span class="kind">Any first question works</span></div>
-      <p class="look"><b>Look for:</b> Attie asks whether you submitted your December leave request. <span class="shot">Screenshot</span> it, then answer honestly.</p>
-      <div class="msg"><q>I already know how to clock in on my phone.</q><button class="copy">Copy</button><span class="kind">Something you already know</span></div>
-      <label class="done-row"><input type="checkbox" id="done-b4"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b5">
-      <div class="day-head"><h3>Day 5 · Your wins</h3><span class="when">Mon 6 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Wins build up</span>
-      <div class="msg"><q>This week I <span class="fill">reorganised the loading bays and trucks waited less</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I <span class="fill">trained two new staff on the scanner</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I'd like to take <span class="fill">a first-aid course next month</span>.</q><button class="copy">Copy</button><span class="kind">A plan</span></div>
-      <label class="done-row"><input type="checkbox" id="done-b5"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b6">
-      <div class="day-head"><h3>Day 6 · Normal HR use</h3><span class="when">Tue 7 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Personal, without getting in the way</span>
-      <div class="msg"><q>How do I clock in on my phone?</q><button class="copy">Copy</button><span class="kind">Should be brief: you said you already know</span></div>
-      <div class="msg"><q>How many leave days do I have left?</q><button class="copy">Copy</button><span class="kind">Live HR data</span></div>
-      <div class="msg"><q>I'm learning to use <span class="fill">the new inventory system</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <label class="done-row"><input type="checkbox" id="done-b6"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="b7">
-      <div class="day-head"><h3>Day 7 · Review or planning</h3><span class="when">Wed 8 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story C: your week comes together</span>
-      <div class="msg"><q>I want to <span class="fill">get my forklift certificate this year</span>.</q><button class="copy">Copy</button><span class="kind">A goal</span></div>
-      <div class="msg"><q>Help me plan my next two weeks.</q><button class="copy">Copy</button><span class="kind">Should use your shifts, constraints, plans and goal together</span></div>
-      <p class="look"><b>Look for:</b> Click <i>See answer without memory</i>. <span class="shot">Screenshot</span> both. This is the before/after for your track.</p>
-      <div class="msg"><q>What do you remember about me?</q><button class="copy">Copy</button><span class="kind">A summary of your week</span></div>
-      <div class="msg"><q>Actually, I now prefer <span class="fill">more detailed answers</span>.</q><button class="copy">Copy</button><span class="kind">A correction: the old preference should stop being used</span></div>
-      <p class="look"><b>Look for:</b> In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. <span class="shot">Screenshot</span> the panel before and after.</p>
-      <label class="done-row"><input type="checkbox" id="done-b7"> Done, and evidence line written</label>
-    </div>
-  </section>
-  <!-- ============================== TRACK C ============================== -->
-  <section class="track" id="track-c" role="tabpanel" aria-labelledby="tab-c" hidden>
-    <div class="track-head">
-      <h2>Growing into leadership</h2>
-      <p>For someone working towards more responsibility. Attie should collect your wins along the way and turn them into review material when you need it.</p>
-    </div>
-    <div class="day" data-day="c1">
-      <div class="day-head"><h3>Day 1 · Introduce yourself</h3><span class="when">Thu 2 Oct</span></div>
-      <span class="story">Preference and goal</span>
-      <div class="msg"><q>I like <span class="fill">detailed answers with an example</span>.</q><button class="copy">Copy</button><span class="kind">A preference: shapes every reply from now on</span></div>
-      <div class="msg"><q>My goal is to <span class="fill">become a team lead within two years</span>.</q><button class="copy">Copy</button><span class="kind">A goal</span></div>
-      <div class="msg"><q>What does my HR profile say about my role?</q><button class="copy">Copy</button><span class="kind">Live HR data: your title comes from HR, not from memory</span></div>
-      <p class="look"><b>Look for:</b> <i>I'll remember that · saving…</i> changes to <i>Saved to your memory</i>. <span class="shot">Screenshot</span> the memory panel.</p>
-      <label class="done-row"><input type="checkbox" id="done-c1"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c2">
-      <div class="day-head"><h3>Day 2 · An HR question, and what you're working on</h3><span class="when">Fri 3 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story A: your preference, without repeating it</span>
-      <div class="msg"><q>Right now I'm working on <span class="fill">my public speaking</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <div class="msg"><q>I prefer feedback <span class="fill">in writing, so I can come back to it</span>.</q><button class="copy">Copy</button><span class="kind">A preference</span></div>
-      <div class="msg"><q>How can I start building leadership experience?</q><button class="copy">Copy</button><span class="kind">Should use your goal and focus, in detail</span></div>
-      <p class="look"><b>Look for:</b> Click <i>See answer without memory</i>. <span class="shot">Screenshot</span> both. Note one line on the difference.</p>
-      <label class="done-row"><input type="checkbox" id="done-c2"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c3">
-      <div class="day-head"><h3>Day 3 · Start something unfinished</h3><span class="when">Sat 4 Oct (or Mon 6)</span><span class="new-chat">New chat first</span></div>
-      <span class="story">An open thread</span>
-      <div class="msg"><q>I'm planning to <span class="fill">attend a leadership workshop in November</span>.</q><button class="copy">Copy</button><span class="kind">A plan</span></div>
-      <div class="msg"><q>Please draft leave for <span class="fill">13–14 November</span> for the workshop.</q><button class="copy">Copy</button><span class="kind">Attie drafts it. Don't submit it yet</span></div>
-      <label class="done-row"><input type="checkbox" id="done-c3"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c4">
-      <div class="day-head"><h3>Day 4 · The follow-up</h3><span class="when">The next day you use it</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story B: Attie knows something is unfinished</span>
-      <div class="msg"><q>How was my attendance this month?</q><button class="copy">Copy</button><span class="kind">Any first question works</span></div>
-      <p class="look"><b>Look for:</b> Attie asks whether you submitted the November leave request. <span class="shot">Screenshot</span> it, then answer honestly.</p>
-      <div class="msg"><q>I already know how the appraisal process works here.</q><button class="copy">Copy</button><span class="kind">Something you already know</span></div>
-      <div class="msg"><q>This week I <span class="fill">mentored a new intern through onboarding</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <label class="done-row"><input type="checkbox" id="done-c4"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c5">
-      <div class="day-head"><h3>Day 5 · Your wins</h3><span class="when">Mon 6 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Wins build up</span>
-      <div class="msg"><q>I <span class="fill">led our weekly team meeting</span> for the first time.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I <span class="fill">automated our monthly report and saved the team a day of work</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <label class="done-row"><input type="checkbox" id="done-c5"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c6">
-      <div class="day-head"><h3>Day 6 · Normal HR use</h3><span class="when">Tue 7 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Personal, without getting in the way</span>
-      <div class="msg"><q>When is my next shift?</q><button class="copy">Copy</button><span class="kind">Live HR data</span></div>
-      <div class="msg"><q>I <span class="fill">presented our quarterly results to the department</span>.</q><button class="copy">Copy</button><span class="kind">A win</span></div>
-      <div class="msg"><q>I'm reading <span class="fill">a book on managing people</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <div class="msg"><q>I want to improve at <span class="fill">giving feedback to colleagues</span>.</q><button class="copy">Copy</button><span class="kind">Current focus</span></div>
-      <label class="done-row"><input type="checkbox" id="done-c6"> Done, and evidence line written</label>
-    </div>
-    <div class="day" data-day="c7">
-      <div class="day-head"><h3>Day 7 · Review or planning</h3><span class="when">Wed 8 Oct</span><span class="new-chat">New chat first</span></div>
-      <span class="story">Story C: your week comes together</span>
-      <div class="msg"><q>Help me prepare for my performance review.</q><button class="copy">Copy</button><span class="kind">Should turn the wins from your week into review points, linked to your goal</span></div>
-      <p class="look"><b>Look for:</b> Your own wins from earlier days, connected to your goal. Click <i>See answer without memory</i> to compare. <span class="shot">Screenshot</span> both. This is the most important screenshot.</p>
-      <div class="msg"><q>What do you remember about me?</q><button class="copy">Copy</button><span class="kind">A summary of your week</span></div>
-      <div class="msg"><q>Actually, I now prefer <span class="fill">more detailed answers</span>.</q><button class="copy">Copy</button><span class="kind">A correction: the old preference should stop being used</span></div>
-      <p class="look"><b>Look for:</b> In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. <span class="shot">Screenshot</span> the panel before and after.</p>
-      <label class="done-row"><input type="checkbox" id="done-c7"> Done, and evidence line written</label>
-    </div>
-  </section>
-  <section style="display:grid;gap:12px">
-    <h2>Your evidence line, once a day</h2>
-    <p>Copy this table into a note or message and add one row a day: the moment that day where Attie remembered something, or should have. Short is fine.</p>
+    <h2>What to record</h2>
     <div class="sheet"><table>
-      <thead><tr><th>Day</th><th>What I asked</th><th>What Attie remembered</th><th>With memory vs without</th><th>Did it help? Why?</th></tr></thead>
-      <tbody><tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr></tbody>
+      <thead><tr><th>Item</th><th>Your answer</th></tr></thead>
+      <tbody><tr><td>Tester ID</td><td></td></tr><tr><td>Number of conversations</td><td></td></tr><tr><td>Memories created</td><td></td></tr><tr><td>Memories recalled</td><td></td></tr><tr><td>Memories corrected</td><td></td></tr><tr><td>Memories forgotten</td><td></td></tr><tr><td>Memory save failures</td><td></td></tr><tr><td>Was the personal response actually more useful?</td><td></td></tr><tr><td>Strongest memory moment</td><td></td></tr><tr><td>Any incorrect or irrelevant memory</td><td></td></tr><tr><td>Any privacy or security issue</td><td></td></tr></tbody>
     </table></div>
-    <p class="tally">Example row: <i>Day 2 · "What should I learn this week?" · that I'm learning Next.js and like short answers · with memory it suggested Next.js routing in three bullets; without, it asked what I was learning · yes, didn't have to explain again.</i></p>
   </section>
   <section class="send-back">
-    <h2>What to send back</h2>
-    <ol>
-      <li>Your evidence lines.</li>
-      <li>Your screenshots, labelled with the day.</li>
-      <li>One or two sentences: the moment Attie remembering something helped most, and anything it got wrong.</li>
-      <li>Anything that broke, looked odd or was slow, with the time it happened.</li>
-    </ol>
-    <p class="tally">Your conversations stay private. Attie doesn't store what you write; the team only sees counts (messages, memories), plus whatever you choose to send back.</p>
+    <h2>Final questions</h2>
+    <p>After the test, the employee answers, and we record the answers word for word:</p>
+    <ol><li>Did Attie's memory make any answer more useful to you than it would have been if you had to explain your context again?</li><li>What was the most useful thing Attie remembered?</li></ol>
+    <p class="tally">Answers may be quoted in the article, only with your permission. Attie doesn't store what you write; the team only sees counts, plus whatever you choose to share.</p>
   </section>
-  <footer>Thank you for testing. Your "Done" ticks are saved in this browser only.</footer>
+  <footer>Thank you for testing. Your ticks are saved in this browser only.</footer>
 </div>
 
 <script>
@@ -379,10 +280,10 @@ footer { color: var(--muted); font-size: 0.85rem; }
     try { localStorage.setItem("attie-guide-track", track); } catch (e) {}
   }
   var start = (location.hash || "").replace("#", "");
-  if (!/^[abc]$/.test(start)) {
-    try { start = localStorage.getItem("attie-guide-track") || "a"; } catch (e) { start = "a"; }
+  if (!/^[123]$/.test(start)) {
+    try { start = localStorage.getItem("attie-guide-track") || "1"; } catch (e) { start = "a"; }
   }
-  show(/^[abc]$/.test(start) ? start : "a");
+  show(/^[123]$/.test(start) ? start : "1");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () { show(t.getAttribute("data-track")); });
   });

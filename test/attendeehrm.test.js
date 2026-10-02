@@ -144,6 +144,17 @@ test("a rejected sign-in logs its reason without the token", async () => {
   assert.equal(log.warnings[0].includes(forged), false);
 });
 
+test("the profile reports the designation as the job title, never the grade", async () => {
+  const withTitle = backend(profileRoute);
+  const a = await withTitle.adapter.getProfile(await withTitle.adapter.resolveIdentity(ADA_TOKEN));
+  assert.equal(a.job_title, "Frontend Developer");
+
+  const noTitle = backend({ "/getemployee": () => ({ data: { ...adaRecord, designation: "", grade: "Grade Two" } }) });
+  const b = await noTitle.adapter.getProfile(await noTitle.adapter.resolveIdentity(ADA_TOKEN));
+  assert.equal(b.job_title, null);
+  assert.equal(b.grade, "Grade Two");
+});
+
 test("shift totals for the month are counted from the roster", async () => {
   const { adapter } = backend({
     ...profileRoute,

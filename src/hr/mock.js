@@ -6,7 +6,8 @@
  * Sign in with `Authorization: Bearer demo-ada` (or demo-tunde, demo-ngozi).
  */
 
-const COMPANY = { companyId: "demo", companyName: "Lumen Logistics (demo)" };
+// DEMO_COMPANY_ID gives a test run its own memory namespaces, so earlier runs cannot affect it.
+const COMPANY = { companyId: process.env.DEMO_COMPANY_ID || "demo", companyName: "Lumen Logistics (demo)" };
 
 const EMPLOYEES = {
   "demo-ada": {
@@ -64,7 +65,7 @@ export const mockAdapter = {
     const e = employeeFor(identity);
     const start = new Date(Date.now() - e.startedDaysAgo * 86_400_000);
     return {
-      name: e.name, role: e.role, department: e.department, branch: e.branch,
+      name: e.name, job_title: e.role, grade: null, department: e.department, branch: e.branch,
       company: COMPANY.companyName, start_date: dateKey(start), reports_to: e.manager,
     };
   },

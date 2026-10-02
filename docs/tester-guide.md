@@ -1,259 +1,215 @@
-# Attie tester guide
+# Attie real-user testing script
 
-_What the people testing Attie follow, 2–8 October 2026. The same guide as a page with copy buttons: [tester-guide.html](tester-guide.html)._
+_What the people testing Attie follow. The same script as a page with copy buttons: [tester-guide.html](tester-guide.html)._
 
-Attie is the HR assistant in AttendeeHRM. It answers from your live HR records and remembers what you tell it about how you work, so you don't have to start from zero every time. This week we want to find out whether that memory actually makes it more useful to you.
+## Purpose
 
-**About 10 minutes a day for seven days**, plus a 5-minute kickoff · **your own AttendeeHRM login** → AI Assistant · **one track each**, the one closest to your real work.
-
-## Day 0 · Five-minute kickoff
-
-Before you start, jot down a few true things about your work. You'll use them in place of the examples in the guide, so Attie learns about the real you.
-
-- What you're working on or learning right now
-- One goal for this quarter
-- How you like answers (short or detailed, any format)
-- Something coming up: time off, a course, a deadline
-- One or two things you've done recently that you're proud of
+You are testing Attie as a real employee, not trying to make the system pass. The goal is to find out whether persistent memory actually improves the employee experience. Don't praise Attie artificially or force a memory to be created: use natural language and let Attie decide what is worth remembering. Each tester completes their assigned scenario with their own AttendeeHRM account.
 
 ## Before you start
 
-- **Be yourself.** The parts in [brackets] are examples. Replace them with things that are true for you, using what you noted at the kickoff, and change any line that doesn't fit. Real answers are the whole point.
-- **Start a new chat each day** with the _New chat_ button. Attie should still remember you: that's what we're testing.
-- **Keep it work-related.** Don't share health details, pay, passwords or anything about colleagues. Attie is built not to keep those, but there's no need to test it.
-- **The first message can take up to a minute** if nobody has used Attie for a while. After that it's quicker.
-- **Click _Helpful_** under a reply when what Attie remembered actually helped you. It only counts the click.
-- **Write one evidence line a day** (see below), and take a screenshot wherever you see 📸.
-- **You're in control.** The panel on the right of the AI Assistant page shows everything Attie remembers. You can correct or forget anything, any time.
+- Use your own AttendeeHRM account: sign in at [attendeehrm.vercel.app/kcysoft/login](https://attendeehrm.vercel.app/kcysoft/login) and open _AI Assistant_.
+- A Walrus save takes about 30 seconds. After you share something, wait until the note under the reply changes from _saving…_ to _Saved to your memory_ before starting a new conversation.
+- The first message can take up to a minute if nobody has used Attie for a while.
+- There's no command to list memories: the _What Attie remembers_ panel on the right shows everything, and lets you correct (pencil) or forget (bin) any memory.
+- Click _Helpful_ under a reply when what Attie remembered genuinely helped. It only counts the click.
+- Don't screenshot private HR information unnecessarily.
 
-## Track A: Learning something new
+## Tester 1 — Preference + goal
 
-For someone fairly new to their role, or picking up a new skill. Attie should tailor what-to-learn advice to you and keep track of your progress.
+_"It knows how I like to work."_ Test whether Attie remembers a personal preference and a longer-term goal, then uses both later without the employee repeating them.
 
-### Day 1 · Introduce yourself
+### Conversation 1
 
-_Thu 2 Oct · Preference and goal_
+> **"I'm currently learning Next.js and my goal is to eventually become a tech lead. Also, I prefer short, practical answers rather than long explanations."**
 
-- **"Please keep your answers [short, with bullet points]."** — A preference: shapes every reply from now on
-- **"My goal this quarter is to [ship my first feature on my own]."** — A goal
-- **"How many leave days do I have left?"** — Live HR data, never stored in memory
+Then continue naturally with:
 
-> **Look for:** Under your messages, _I'll remember that · saving…_ changes to _Saved to your memory_ within a minute. 📸 the memory panel.
+> **"What should I focus on improving at work this quarter?"**
 
-### Day 2 · An HR question, and what you're working on
+_Look for:_ Observe whether Attie responds appropriately. Wait until the note under the reply says _Saved to your memory_ (about 30 seconds) before moving on.
 
-_Fri 3 Oct · start a new chat · Story A: your preference, without repeating it_
+### New conversation
 
-- **"I'm currently learning [Next.js]. It's my main focus this month."** — Current focus
-- **"I work best [in the mornings, before noon]."** — A working preference
-- **"What should I focus on learning this week?"** — Should build on what you're learning, in your style
+Start a *_new conversation__: click _New chat*. Don't tell Attie this is a test.
 
-> **Look for:** A short answer that builds on what you're learning, without you repeating it. Click _See answer without memory_ under it. 📸 both answers. Note one line on the difference.
+> **"I have some free time this week. What would be useful for me to work on?"**
 
-### Day 3 · Start something unfinished
+_Look for:_ Observe whether Attie uses your learning focus, your career goal and your answer preference without you repeating them.
 
-_Sat 4 Oct (or Mon 6) · start a new chat · An open thread_
+### Memory check
 
-- **"Can I take [Friday 17 October] off? Please draft the request."** — Attie drafts it. Don't submit it yet
-- **"I'm working on [the customer dashboard project]."** — Current focus
+To check what was remembered, open the _What Attie remembers_ panel on the right of the AI Assistant page. Confirm that useful memories were created.
 
-### Day 4 · The follow-up
+### Before / after
 
-_The next day you use it · start a new chat · Story B: Attie knows something is unfinished_
+> **"What should I focus on learning next?"**
 
-- **"When is my next shift?"** — Any first question works
+Capture the personalised answer. Then click _See answer without memory_ under it, and capture both responses.
 
-> **Look for:** Attie answers, then asks whether you submitted the leave request you drafted. 📸 it, then answer honestly.
+### Screenshots to capture
 
-- **"I already know how to request leave in the app."** — Something you already know
+1. The original conversation where the preference and goal were stated.
+2. The new conversation where Attie uses them without being reminded.
+3. The before/after comparison.
+4. The memory panel showing the stored memories.
 
-### Day 5 · Your wins
+## Tester 2 — Unfinished leave request
 
-_Mon 6 Oct · start a new chat · Wins build up_
+_"It remembers what I left unfinished."_ Test whether Attie remembers something the employee started but did not finish.
 
-- **"This week I [finished my first code review]."** — A win
-- **"I [fixed the login page bug] and it went live."** — A win
-- **"I [learned the basics of Docker]."** — A win
-- **"I learn best from [short video tutorials]."** — A preference
+### Conversation 1
 
-### Day 6 · Normal HR use
+> **"I'd like to take annual leave from December 21st to December 25th. Can you help me draft the request?"**
 
-_Tue 7 Oct · start a new chat · Personal, without getting in the way_
+_Look for:_ Let Attie use your real HR data where it needs to (for example your leave balance).
 
-- **"How was my attendance this month?"** — Live HR data
-- **"How do I request leave?"** — Should be brief: you said you already know
-- **"I'd like [a mentor in frontend architecture]."** — A goal
-- **"I'd like to take [a week off at the end of the year]."** — A plan
+Then say:
 
-### Day 7 · Review or planning
+> **"This looks good. I'll submit it later."**
 
-_Wed 8 Oct · start a new chat · Story C: your week comes together_
+_Look for:_ Do *_not__ submit the request, and don't say you've submitted it: that tells Attie the task is done. Wait until the note says _Saved to your memory*.
 
-- **"What should I learn after [Next.js]? Help me plan the next two weeks."** — Should connect your focus, goals, wins and learning style
+### New conversation
 
-> **Look for:** Click _See answer without memory_. 📸 both. This is the before/after for your track.
+Start a *_new conversation__: click _New chat*. Don't tell Attie this is a test.
 
-- **"What do you remember about me?"** — A summary of your week
-- **"Actually, I now prefer [more detailed answers]."** — A correction: the old preference should stop being used
+> **"What's my next shift?"**
 
-> **Look for:** In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. 📸 the panel before and after.
+_Look for:_ Let Attie answer from your live HR data. Notice whether it brings up the unfinished leave request on its own.
 
-## Track B: Shifts & operations
+Then ask naturally:
 
-For someone whose day revolves around shifts, attendance and planning time off. Attie should learn your constraints and plans so its answers fit your real week.
+> **"Is there anything I still need to take care of?"**
 
-### Day 1 · Introduce yourself
+_Look for:_ Observe whether Attie remembers the unfinished leave request.
 
-_Thu 2 Oct · Preference and goal_
+### Follow-up
 
-- **"Please reply in [simple, short sentences]."** — A preference: shapes every reply from now on
-- **"I prefer [early shifts], and I need to [leave by 4pm on weekdays]."** — A working preference (the constraint, not the reason)
-- **"My goal this quarter is to [have no late arrivals]."** — A goal
-- **"When is my next shift?"** — Live HR data
+> **"What was the leave request I was working on?"**
 
-> **Look for:** _I'll remember that · saving…_ changes to _Saved to your memory_. 📸 the memory panel.
+_Look for:_ Attie should identify the unfinished request.
 
-### Day 2 · An HR question, and what you're working on
+### Memory check
 
-_Fri 3 Oct · start a new chat · Story A: your preference, without repeating it_
+Open the _What Attie remembers_ panel on the right of the AI Assistant page. Confirm the unfinished request is listed under _Unfinished things_.
 
-- **"I'm learning [Excel for stock reports]."** — Current focus
-- **"I like a reminder [a day before my shifts change]."** — A preference
-- **"How was my attendance this month?"** — Live numbers, framed around your goal, in your style
+### Screenshots to capture
 
-> **Look for:** Click _See answer without memory_ under the attendance answer. 📸 both. Note one line on the difference.
+1. The original leave-draft conversation.
+2. The new conversation where Attie brings up the unfinished request.
+3. The memory entry showing the unfinished request.
+4. If useful, the live HR answer, showing Attie combining what is true now (HR data) with what you were working on (memory).
 
-### Day 3 · Start something unfinished
+## Tester 3 — Achievements + performance review
 
-_Sat 4 Oct (or Mon 6) · start a new chat · An open thread_
+_"It remembers what I've accomplished."_ Test whether Attie remembers meaningful work achievements and later uses them to give more personal career support.
 
-- **"I want to take [the week of 22 December] off. Please draft the request."** — Attie checks your balance and drafts it. Don't submit it yet
-- **"I'd like to [swap to more morning shifts next month]."** — A plan
+### Conversation 1
 
-### Day 4 · The follow-up
+> **"I automated our monthly payroll export today. It used to take me a lot of manual work."**
 
-_The next day you use it · start a new chat · Story B: Attie knows something is unfinished_
+Continue:
 
-- **"Do I work this weekend?"** — Any first question works
+> **"I also helped a new intern understand our reporting process."**
 
-> **Look for:** Attie asks whether you submitted your December leave request. 📸 it, then answer honestly.
+_Look for:_ Let Attie respond normally. Wait until both notes say _Saved to your memory_.
 
-- **"I already know how to clock in on my phone."** — Something you already know
+### New conversation
 
-### Day 5 · Your wins
+Start a *_new conversation__: click _New chat*. Don't tell Attie this is a test.
 
-_Mon 6 Oct · start a new chat · Wins build up_
+> **"I have a performance review coming up. How should I prepare?"**
 
-- **"This week I [reorganised the loading bays and trucks waited less]."** — A win
-- **"I [trained two new staff on the scanner]."** — A win
-- **"I'd like to take [a first-aid course next month]."** — A plan
+_Look for:_ Don't mention your earlier achievements. Observe whether Attie uses them to make the advice specific.
 
-### Day 6 · Normal HR use
+### Follow-up
 
-_Tue 7 Oct · start a new chat · Personal, without getting in the way_
+> **"What accomplishments have I mentioned before that could be useful for my review?"**
 
-- **"How do I clock in on my phone?"** — Should be brief: you said you already know
-- **"How many leave days do I have left?"** — Live HR data
-- **"I'm learning to use [the new inventory system]."** — Current focus
+_Look for:_ Observe whether Attie brings up the remembered work.
 
-### Day 7 · Review or planning
+### Before / after
 
-_Wed 8 Oct · start a new chat · Story C: your week comes together_
+Under the review-preparation answer, click _See answer without memory_ and compare the generic response with the personal one.
 
-- **"I want to [get my forklift certificate this year]."** — A goal
-- **"Help me plan my next two weeks."** — Should use your shifts, constraints, plans and goal together
+### Screenshots to capture
 
-> **Look for:** Click _See answer without memory_. 📸 both. This is the before/after for your track.
+1. The original conversation containing the achievements.
+2. The new performance-review conversation.
+3. The personal answer that refers to your earlier achievements.
+4. The memory panel showing the achievement memories (under _Your wins_).
+5. The before/after comparison, if the difference is meaningful.
 
-- **"What do you remember about me?"** — A summary of your week
-- **"Actually, I now prefer [more detailed answers]."** — A correction: the old preference should stop being used
+## Trust test — everyone, don't skip
 
-> **Look for:** In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. 📸 the panel before and after.
+After your main scenario, do at least one of these.
 
-## Track C: Growing into leadership
+### Memory isolation
 
-For someone working towards more responsibility. Attie should collect your wins along the way and turn them into review material when you need it.
+Tester 1 must not be able to retrieve Tester 2's memories. Tester 1 asks:
 
-### Day 1 · Introduce yourself
+> **"What do you remember about my leave plans?"**
 
-_Thu 2 Oct · Preference and goal_
+The answer must only use Tester 1's own memory.
 
-- **"I like [detailed answers with an example]."** — A preference: shapes every reply from now on
-- **"My goal is to [become a team lead within two years]."** — A goal
-- **"What does my HR profile say about my role?"** — Live HR data: your title comes from HR, not from memory
+### HR authority
 
-> **Look for:** _I'll remember that · saving…_ changes to _Saved to your memory_. 📸 the memory panel.
+If appropriate, say something that conflicts with your HR data, for example:
 
-### Day 2 · An HR question, and what you're working on
+> **"I think my leave balance is 20 days."**
 
-_Fri 3 Oct · start a new chat · Story A: your preference, without repeating it_
+Attie should use your actual HR record, not your statement. Don't change real HR records to do this test.
 
-- **"Right now I'm working on [my public speaking]."** — Current focus
-- **"I prefer feedback [in writing, so I can come back to it]."** — A preference
-- **"How can I start building leadership experience?"** — Should use your goal and focus, in detail
+### Memory controls
 
-> **Look for:** Click _See answer without memory_. 📸 both. Note one line on the difference.
+Open the _What Attie remembers_ panel on the right of the AI Assistant page, then correct or forget a memory where appropriate.
 
-### Day 3 · Start something unfinished
+Ask about it again and check that the forgotten memory is no longer used.
 
-_Sat 4 Oct (or Mon 6) · start a new chat · An open thread_
+## Don't
 
-- **"I'm planning to [attend a leadership workshop in November]."** — A plan
-- **"Please draft leave for [13–14 November] for the workshop."** — Attie drafts it. Don't submit it yet
+- Tell Attie exactly what memory to create.
+- Repeatedly say "remember this".
+- Ask leading questions such as "Do you remember that I like short answers?"
+- Pretend something happened when it didn't.
+- Repeat the same information in every conversation.
+- Praise Attie simply because it remembered something.
+- Manufacture a successful result.
 
-### Day 4 · The follow-up
+The goal is to see whether memory works naturally.
 
-_The next day you use it · start a new chat · Story B: Attie knows something is unfinished_
+## What to record
 
-- **"How was my attendance this month?"** — Any first question works
+| Item | Your answer |
+|---|---|
+| Tester ID | |
+| Number of conversations | |
+| Memories created | |
+| Memories recalled | |
+| Memories corrected | |
+| Memories forgotten | |
+| Memory save failures | |
+| Was the personal response actually more useful? | |
+| Strongest memory moment | |
+| Any incorrect or irrelevant memory | |
+| Any privacy or security issue | |
 
-> **Look for:** Attie asks whether you submitted the November leave request. 📸 it, then answer honestly.
+## Final questions
 
-- **"I already know how the appraisal process works here."** — Something you already know
-- **"This week I [mentored a new intern through onboarding]."** — A win
+After the test, ask the employee and record the answers word for word:
 
-### Day 5 · Your wins
+1. Did Attie's memory make any answer more useful to you than it would have been if you had to explain your context again?
+2. What was the most useful thing Attie remembered?
 
-_Mon 6 Oct · start a new chat · Wins build up_
+Answers may be quoted in the article, only with the employee's permission.
 
-- **"I [led our weekly team meeting] for the first time."** — A win
-- **"I [automated our monthly report and saved the team a day of work]."** — A win
+## For the article
 
-### Day 6 · Normal HR use
+Show three forms of memory, each as conversation A → new conversation → personal response → memory evidence:
 
-_Tue 7 Oct · start a new chat · Personal, without getting in the way_
+1. **"It knows how I like to work."** — Tester 1: preference + goal.
+1. **"It remembers what I left unfinished."** — Tester 2: unfinished leave request.
+1. **"It remembers what I've accomplished."** — Tester 3: achievements + performance review.
 
-- **"When is my next shift?"** — Live HR data
-- **"I [presented our quarterly results to the department]."** — A win
-- **"I'm reading [a book on managing people]."** — Current focus
-- **"I want to improve at [giving feedback to colleagues]."** — Current focus
-
-### Day 7 · Review or planning
-
-_Wed 8 Oct · start a new chat · Story C: your week comes together_
-
-- **"Help me prepare for my performance review."** — Should turn the wins from your week into review points, linked to your goal
-
-> **Look for:** Your own wins from earlier days, connected to your goal. Click _See answer without memory_ to compare. 📸 both. This is the most important screenshot.
-
-- **"What do you remember about me?"** — A summary of your week
-- **"Actually, I now prefer [more detailed answers]."** — A correction: the old preference should stop being used
-
-> **Look for:** In the memory panel, correct one memory with the pencil icon and forget one you don't need with the bin icon. 📸 the panel before and after.
-
-## Your evidence line, once a day
-
-Add one row a day: the moment that day where Attie remembered something, or should have.
-
-| Day | What I asked | What Attie remembered | With memory vs without | Did it help? Why? |
-|---|---|---|---|---|
-| Day 2 | "What should I learn this week?" | That I'm learning Next.js and like short answers | With memory: Next.js routing in three bullets. Without: asked what I was learning | Yes, didn't have to explain again |
-
-## What to send back
-
-1. Your evidence lines.
-2. Your screenshots, labelled with the day.
-3. One or two sentences: the moment Attie remembering something helped most, and anything it got wrong.
-4. Anything that broke, looked odd or was slow, with the time it happened.
-
-Your conversations stay private. Attie doesn't store what you write; the team only sees counts (messages, memories), plus whatever you choose to send back.
+The strongest evidence is when the memory changes what Attie does next, not merely that a memory exists. Use only the strongest real examples.

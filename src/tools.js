@@ -35,7 +35,7 @@ export function buildTools(adapter, identity, trace) {
   return [
     tool(
       "get_my_profile",
-      "The signed-in employee's HR profile: name, role, department, branch, start date. Use for anything about their position or tenure.",
+      "The signed-in employee's HR profile: name, job title, grade, department, branch, start date. Use for anything about their position or tenure. If job_title is null, the HR record has no job title: say so, and don't present the grade or department as a title.",
       z.object({}),
       () => adapter.getProfile(identity),
     ),
