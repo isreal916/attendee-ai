@@ -38,6 +38,22 @@ does, including failures.
 4. "I already know how the payroll export works, I built it."
 5. New chat: "I have a 1:1 with my manager tomorrow. What should I bring up?" *Check: short, uses both wins, the goal and this week's documentation work.*
 
+## Day 3 (4 Oct 2026)
+
+Short sessions. Goal: show memory still working on a third day, and test the controls.
+
+### Account 1
+1. New chat: "Can you explain how React server components fetch data?" *Check: short answer with a code example (two preferences).*
+2. Memory panel: forget "Plans to take a week off in mid-November". Then: "Anything coming up I should plan for?" *Check: the forgotten plan isn't used.*
+
+### Account 2
+1. New chat: "What's my next shift?" *Check: no repeat leave question now that the "submit on Friday" plan is recalled (fix 2b921c0); at most a reminder of his own plan.*
+2. "What do you remember about me?" *Check: bullets, full list.*
+
+### Account 3
+1. New chat: "How do I request a day off?" *Check: numbered checklist, short.*
+2. "Actually, I've moved my days off to the first week of November." *Check: the October plan is replaced, not duplicated.*
+
 ## Results
 
 | Day | Account | Memories added | Recalled unprompted | Notes |
