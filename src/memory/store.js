@@ -12,7 +12,10 @@ const POOL_TTL_MS = 90_000;
 const MAX_PER_TURN = 6;
 const MAX_FOR_REVIEW = 10;
 const RECENT_MS = 15 * 60_000;
-const ASKS_ABOUT_REVIEW = /apprais|perform|review|self[- ]?assess|achiev|accomplish|\bwins?\b|proud|promot/i;
+// Reviews, and any conversation with their manager (a 1:1, a check-in), are where wins, goals and
+// current work belong, though "my 1:1 this week" shares no words with any of them.
+const ASKS_ABOUT_REVIEW =
+  /apprais|perform|review|self[- ]?assess|achiev|accomplish|\bwins?\b|proud|promot|\b1\s?[:-]\s?1\b|\bone[- ]on[- ]one\b|\bcheck[- ]in\b|\b(my|the) (manager|boss|supervisor|line manager|team lead)\b/i;
 // Open-ended guidance ("what should I work on?", "how can I grow?") is when goals and current
 // focus matter most, yet it rarely shares words with them, so similarity alone misses them.
 const ASKS_FOR_GUIDANCE =
@@ -255,7 +258,7 @@ export class MemoryStore {
       ...ofType("preference"),
       ...(openThreads ? ofType("open_thread") : []),
       ...(openThreads && !firstMessage ? ofType("plan") : []),
-      ...(review ? ofType("achievement", "goal") : []),
+      ...(review ? ofType("achievement", "goal", "focus") : []),
       ...(guidance ? ofType("goal", "focus") : []),
       ...[...relevantHits].sort((a, b) => a.distance - b.distance),
     ];

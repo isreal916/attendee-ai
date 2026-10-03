@@ -64,7 +64,11 @@ export function screenMemory({ type, text }) {
   const clean = String(text ?? "").replace(/\s+/g, " ").trim();
   if (clean.length < 8) return { ok: false, reason: "too short to be useful" };
   if (clean.length > MAX_MEMORY_CHARS) return { ok: false, reason: "too long — one sentence only" };
+  // "Already knows how to check their payslip" is a how-to, not pay data; with no figures in it,
+  // the pay rule doesn't apply to it.
+  const howTo = type === "knows" && !/\d|[₦$£€]/.test(clean);
   for (const [pattern, reason] of DENY) {
+    if (howTo && reason === "pay/finance") continue;
     if (pattern.test(clean)) return { ok: false, reason: `not stored: ${reason}` };
   }
   return { ok: true, text: clean };

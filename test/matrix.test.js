@@ -12,6 +12,7 @@ import { runTurn, sharedAgo } from "../src/agent.js";
 import { createApp } from "../src/app.js";
 import { mockAdapter } from "../src/hr/mock.js";
 import { openIndex } from "../src/memory/index-db.js";
+import { screenMemory } from "../src/memory/policy.js";
 import { MemoryStore } from "../src/memory/store.js";
 
 const quiet = { error() {} };
@@ -418,4 +419,42 @@ test("today's weekday is given to the model, and it is told never to work one ou
   await turn(store, llm, ADA, later("When is my next shift?"));
   assert.match(llm.systems[0], /Today is (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{4}-\d{2}-\d{2}\./);
   assert.match(llm.systems[0], /never work out a weekday yourself/);
+});
+
+test("recall: a 1:1 or check-in with the manager brings in wins, goals and current focus", async () => {
+  const store = new MemoryStore({
+    client: MemWalMock.create(),
+    index: openIndex(":memory:"),
+    maxDistance: 0.05, // nothing passes the similarity filter, as with real phrasing that shares no words
+    retryDelayMs: 0,
+    log: { error() {} },
+  });
+  await store.save(ADA, { type: "preference", text: "Prefers short, practical answers." });
+  await store.save(ADA, { type: "goal", text: "Wants to eventually become a tech lead." });
+  await store.save(ADA, { type: "focus", text: "Is building a small internal dashboard in Next.js." });
+  await store.save(ADA, { type: "achievement", text: "Shipped the dashboard's login page." });
+  await store.save(ADA, { type: "knows", text: "Already knows how to request leave." });
+  await store.settle();
+  const types = async (q) => (await store.recall(ADA, q)).memories.map((m) => m.type).sort();
+
+  for (const q of [
+    "What should I bring up in my 1:1 with my manager this week?",
+    "I have a one-on-one tomorrow, any tips?",
+    "Prep me for a check-in with my boss",
+  ]) {
+    assert.deepEqual(await types(q), ["achievement", "focus", "goal", "preference"], q);
+  }
+});
+
+test("a 'knows how to' memory may name payslips, but never pay figures", () => {
+  assert.equal(screenMemory({ type: "knows", text: "Already knows how to check their payslip." }).ok, true);
+  assert.equal(screenMemory({ type: "knows", text: "Already knows their payslip shows ₦450,000." }).ok, false);
+  assert.equal(screenMemory({ type: "preference", text: "Wants their payslip explained in detail." }).ok, false);
+});
+
+test("the model is told wins are remembered automatically", async () => {
+  const store = newStore();
+  const llm = stubLlm();
+  await turn(store, llm, ADA, later("When is my next shift?"));
+  assert.match(llm.systems[0], /never ask whether to keep track of them/);
 });
