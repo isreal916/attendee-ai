@@ -457,4 +457,6 @@ test("the model is told wins are remembered automatically", async () => {
   const llm = stubLlm();
   await turn(store, llm, ADA, later("When is my next shift?"));
   assert.match(llm.systems[0], /never ask whether to keep track of them/);
+  assert.match(llm.systems[0], /Never offer to note, track or remember something/);
+  assert.match(llm.systems[0], /If a \[plan\] says when they will finish it/);
 });
