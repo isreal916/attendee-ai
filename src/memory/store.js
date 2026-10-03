@@ -254,10 +254,12 @@ export class MemoryStore {
     const guidance = ASKS_FOR_GUIDANCE.test(query);
     const openThreads = firstMessage || ASKS_ABOUT_PENDING.test(query);
     const ofType = (...types) => poolHits.filter((h) => types.includes(typeOf(h)));
+    const threads = openThreads ? ofType("open_thread") : [];
     const ordered = [
       ...ofType("preference"),
-      ...(openThreads ? ofType("open_thread") : []),
-      ...(openThreads && !firstMessage ? ofType("plan") : []),
+      ...threads,
+      // Plans come with open threads: "will submit it on Friday" decides whether a follow-up is needed.
+      ...(threads.length || (openThreads && !firstMessage) ? ofType("plan") : []),
       ...(review ? ofType("achievement", "goal", "focus") : []),
       ...(guidance ? ofType("goal", "focus") : []),
       ...[...relevantHits].sort((a, b) => a.distance - b.distance),

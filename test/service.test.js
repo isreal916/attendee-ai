@@ -226,9 +226,10 @@ test("preferences are recalled for any question; goals and plans only when relev
   // Mid-conversation: only the preference shapes the answer.
   let { memories } = await store.recall(ada, "When is my next shift?");
   assert.deepEqual(memories.map((m) => m.type), ["preference"]);
-  // First message of a conversation: the open thread is worth one follow-up.
+  // First message of a conversation: the open thread is worth one follow-up, and plans come with
+  // it so a plan like "will submit it on Friday" can stop the follow-up being asked again.
   ({ memories } = await store.recall(ada, "When is my next shift?", { firstMessage: true }));
-  assert.deepEqual(memories.map((m) => m.type).sort(), ["open_thread", "preference"]);
+  assert.deepEqual(memories.map((m) => m.type).sort(), ["open_thread", "plan", "preference"]);
 });
 
 test("a memory forgotten while its upload is in flight never reappears", async () => {
