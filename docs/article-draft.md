@@ -22,7 +22,7 @@ Recall is selective: preferences always; unfinished tasks at the start of a conv
 
 ## Before and after, on real accounts
 
-Attie ran in our live AttendeeHRM from 1 to 3 October on three staff accounts. I drove the sessions from a test script, since we had no outside testers yet. By day three each account held 10 memories, and 58 of 67 replies used memory.
+Attie ran in our live AttendeeHRM on three staff accounts over four days (1–6 October). I drove the sessions from a test script, since we had no outside testers yet. Each account ended with 10 memories, and 65 of 74 replies used memory.
 
 **Remembering across sessions.** One employee mentioned learning Next.js and wanting to become a tech lead. In a new chat, "What should I focus on learning next?" got "Keep the Next.js momentum, but add one tech-lead skill on top". The app's "See answer without memory" button showed a generic list ending "Tell me a bit more".
 
