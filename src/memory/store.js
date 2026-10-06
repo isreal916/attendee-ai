@@ -370,6 +370,8 @@ export class MemoryStore {
       const { type, text } = parseMemory(hit.text);
       fromHits.push({
         id: hit.blob_id,
+        // The Walrus blob holding this memory, so it can be checked on a Walrus explorer.
+        blobId: hit.blob_id,
         // The id the memory was saved under, so a client can follow a save from "saving" to "stored".
         ref: row?.id ?? null,
         type,

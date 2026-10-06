@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attie demo</title>
+<style>
+  :root { --bg:#f6f8f7; --card:#fff; --ink:#15211d; --muted:#5d6b66; --line:#e1e7e4; --brand:#0b8a6a; --brand-ink:#fff; --soft:#e8f4f0; --warn:#fff6e0; --warn-ink:#6b4e00; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1513; --card:#17201d; --ink:#e7eeeb; --muted:#9aa8a3; --line:#2a3632; --brand:#2bb38f; --brand-ink:#06120e; --soft:#1d2b27; --warn:#2c2410; --warn-ink:#f0d68a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { max-width:1100px; margin:0 auto; padding:24px 16px 8px; }
+  h1 { margin:0 0 4px; font-size:24px; }
+  header p { margin:0; color:var(--muted); max-width:760px; }
+  .notice { margin-top:12px; padding:8px 12px; border-radius:10px; background:var(--warn); color:var(--warn-ink); font-size:13px; }
+  .people { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .person { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:12px; padding:8px 12px; cursor:pointer; text-align:left; }
+  .person small { display:block; color:var(--muted); }
+  .person[aria-pressed="true"] { border-color:var(--brand); box-shadow:0 0 0 2px var(--brand) inset; }
+  main { max-width:1100px; margin:0 auto; padding:12px 16px 32px; display:grid; gap:16px; grid-template-columns:minmax(0,1fr) 320px; }
+  @media (max-width: 820px) { main { grid-template-columns:1fr; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0; }
+  .bar { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line); font-size:13px; color:var(--muted); }
+  .chat { height:62vh; min-height:360px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .msg { max-width:85%; padding:9px 12px; border-radius:14px; white-space:pre-wrap; word-wrap:break-word; }
+  .user { align-self:flex-end; background:var(--brand); color:var(--brand-ink); border-top-right-radius:4px; }
+  .bot { align-self:flex-start; background:var(--soft); border-top-left-radius:4px; }
+  .meta { font-size:12px; color:var(--muted); margin-top:4px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .meta button, .link { background:none; border:0; padding:0; color:var(--brand); cursor:pointer; font:inherit; text-decoration:underline; }
+  .without { margin-top:6px; padding:8px 10px; border:1px dashed var(--line); border-radius:10px; font-size:13px; white-space:pre-wrap; }
+  .without b { display:block; font-size:12px; color:var(--muted); }
+  .saved { font-size:12px; color:var(--muted); }
+  .tries { display:flex; gap:6px; flex-wrap:wrap; padding:0 14px 10px; }
+  .tries button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer; }
+  form { display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--line); }
+  input { flex:1; min-width:0; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:999px; padding:9px 14px; font:inherit; }
+  .btn { border:0; background:var(--brand); color:var(--brand-ink); border-radius:999px; padding:9px 16px; font:inherit; cursor:pointer; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .mem { padding:12px 14px; overflow-y:auto; max-height:62vh; display:flex; flex-direction:column; gap:8px; }
+  .item { border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; }
+  .item .type { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .item .foot { display:flex; justify-content:space-between; gap:8px; margin-top:4px; font-size:11px; color:var(--muted); }
+  .item a { color:var(--brand); }
+  .empty { color:var(--muted); font-size:13px; text-align:center; padding:24px 8px; }
+  footer { max-width:1100px; margin:0 auto; padding:0 16px 32px; color:var(--muted); font-size:13px; }
+  footer a { color:var(--brand); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Attie: an HR assistant that remembers you</h1>
+  <p>Attie answers employees' HR questions from live HR records, and remembers what they share about how they work, using Walrus Memory. Pick an employee of <b>Lumen Logistics</b>, a made-up demo company, tell Attie something about yourself, then start a new chat and see it come back.</p>
+  <div class="notice">Shared demo: everyone who picks the same employee shares their memories. Please don't type real personal information.</div>
+  <div class="people" id="people"></div>
+</header>
+<main>
+  <section>
+    <div class="bar"><span id="who">Pick an employee to start.</span><button class="link" id="newChat" type="button">New chat</button></div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="tries" id="tries"></div>
+    <form id="form"><input id="input" placeholder="Ask about leave, shifts, pay, or tell Attie how you work" maxlength="2000" autocomplete="off" disabled><button class="btn" id="send" disabled>Send</button></form>
+  </section>
+  <section>
+    <div class="bar"><span>What Attie remembers <span id="count"></span></span><button class="link" id="forgetAll" type="button">Forget everything</button></div>
+    <div class="mem" id="mem"><p class="empty">Pick an employee to see their memories.</p></div>
+  </section>
+</main>
+<footer>Every memory is stored as an encrypted blob on Walrus (__NETWORK__); its link opens the blob on Walruscan. HR figures always come from the HR record and are never stored. Code: <a href="https://github.com/isreal916/attendee-ai">github.com/isreal916/attendee-ai</a></footer>
+<script>
+const NETWORK = "__NETWORK__";
+const PEOPLE = [
+  { token: "demo-ada", name: "Ada Okafor", role: "Frontend developer, 2 weeks in" },
+  { token: "demo-tunde", name: "Tunde Bello", role: "Warehouse shift supervisor" },
+  { token: "demo-ngozi", name: "Ngozi Eze", role: "Senior backend engineer" },
+];
+const TRIES = [
+  "I prefer short answers, with bullet points.",
+  "I'm learning TypeScript and my goal is to become a tech lead.",
+  "Can you draft leave for 21 to 23 December? I'll submit it later.",
+  "What should I focus on this week?",
+  "How many leave days do I have?",
+];
+const LABELS = { preference: "How you like to work", goal: "Goal", focus: "Working on", plan: "Plan", open_thread: "Unfinished", achievement: "Win", knows: "Already knows", context: "Other" };
+const $ = (id) => document.getElementById(id);
+let token = null, transcript = [], busy = false, poll = null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Attie couldn't answer just now.");
+  return data;
+}
+
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+function pick(p) {
+  token = p.token; transcript = []; $("chat").replaceChildren();
+  for (const b of $("people").children) b.setAttribute("aria-pressed", String(b.dataset.token === p.token));
+  $("who").textContent = `Chatting as ${p.name}`;
+  $("input").disabled = $("send").disabled = false; $("input").focus();
+  loadMemories();
+}
+
+function addUser(text) { const m = el("div", "msg user", text); $("chat").append(m); m.scrollIntoView({ block: "end" }); }
+
+function addBot(result, asked) {
+  const wrap = el("div"); wrap.style.alignSelf = "flex-start"; wrap.style.maxWidth = "85%";
+  const m = el("div", "msg bot", result.reply); m.style.maxWidth = "100%";
+  const meta = el("div", "meta");
+  const used = result.memory?.recalled?.length ?? 0;
+  if (used) meta.append(el("span", null, `Used ${used} memor${used === 1 ? "y" : "ies"}`));
+  if (result.hr?.lookups?.length) meta.append(el("span", null, "Live HR data"));
+  const cmp = el("button", null, "See answer without memory"); cmp.type = "button";
+  cmp.onclick = async () => {
+    if (cmp.dataset.done) { const b = wrap.querySelector(".without"); b.hidden = !b.hidden; return; }
+    cmp.disabled = true; cmp.textContent = "Asking without memory…";
+    try {
+      const r = await api("/chat", { method: "POST", body: JSON.stringify({ messages: asked, memory: false, compare: true }) });
+      const box = el("div", "without"); box.append(el("b", null, "Same question, without memory"), document.createTextNode(r.reply));
+      wrap.append(box); cmp.dataset.done = "1"; cmp.textContent = "Show / hide answer without memory";
+    } catch (e) { cmp.textContent = e.message; }
+    cmp.disabled = false;
+  };
+  meta.append(cmp);
+  wrap.append(m, meta);
+  for (const ev of result.memory?.events ?? []) {
+    if (ev.event === "saved") wrap.append(el("div", "saved", `Saving to Walrus: "${ev.memory.text}"`));
+  }
+  $("chat").append(wrap); wrap.scrollIntoView({ block: "end" });
+}
+
+async function send(text) {
+  if (!token || busy || !text.trim()) return;
+  busy = true; $("send").disabled = true; $("input").value = "";
+  addUser(text);
+  transcript.push({ role: "user", content: text });
+  const asked = [...transcript];
+  const typing = el("div", "msg bot", "…"); $("chat").append(typing);
+  try {
+    const result = await api("/chat", { method: "POST", body: JSON.stringify({ messages: asked }) });
+    typing.remove();
+    transcript.push({ role: "assistant", content: result.reply });
+    addBot(result, asked);
+    if (result.memory?.events?.length) loadMemories();
+  } catch (e) {
+    typing.textContent = e.message; transcript.pop();
+  }
+  busy = false; $("send").disabled = false; $("input").focus();
+}
+
+async function loadMemories() {
+  clearTimeout(poll);
+  const box = $("mem");
+  try {
+    const { memories } = await api("/memories");
+    $("count").textContent = `(${memories.length})`;
+    if (!memories.length) { box.replaceChildren(el("p", "empty", "Nothing yet. Tell Attie how you like answers, what you're working on, or a goal.")); return; }
+    box.replaceChildren(...memories.map((m) => {
+      const item = el("div", "item");
+      item.append(el("div", "type", LABELS[m.type] ?? m.type), el("div", null, m.text));
+      const foot = el("div", "foot");
+      if (m.blobId) {
+        const a = el("a", null, `On Walrus: ${m.blobId.slice(0, 10)}…`);
+        a.href = `https://walruscan.com/${NETWORK}/blob/${m.blobId}`; a.target = "_blank"; a.rel = "noopener";
+        foot.append(a);
+      } else foot.append(el("span", null, m.status === "failed" ? "Couldn't be saved" : "Saving to Walrus…"));
+      const f = el("button", "link", "Forget"); f.type = "button";
+      f.onclick = async () => { f.textContent = "Forgetting…"; await api(`/memories/${encodeURIComponent(m.id)}`, { method: "DELETE" }).catch(() => {}); loadMemories(); };
+      foot.append(f); item.append(foot); return item;
+    }));
+    if (memories.some((m) => m.status === "saving")) poll = setTimeout(loadMemories, 8000);
+  } catch (e) {
+    box.replaceChildren(el("p", "empty", e.message)); poll = setTimeout(loadMemories, 10000);
+  }
+}
+
+for (const p of PEOPLE) {
+  const b = el("button", "person"); b.type = "button"; b.dataset.token = p.token; b.setAttribute("aria-pressed", "false");
+  b.append(document.createTextNode(p.name), el("small", null, p.role)); b.onclick = () => pick(p);
+  $("people").append(b);
+}
+for (const t of TRIES) { const b = el("button", null, t); b.type = "button"; b.onclick = () => send(t); $("tries").append(b); }
+$("form").onsubmit = (e) => { e.preventDefault(); send($("input").value); };
+$("newChat").onclick = () => { transcript = []; $("chat").replaceChildren(); $("input").focus(); };
+$("forgetAll").onclick = async () => {
+  if (!token || !confirm("Forget everything Attie remembers about this employee?")) return;
+  await api("/memories", { method: "DELETE" }).catch(() => {}); loadMemories();
+};
+</script>
+</body>
+</html>

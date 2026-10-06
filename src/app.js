@@ -24,7 +24,7 @@ function parseMessages(input) {
  * @param {import("./memory/store.js").MemoryStore} deps.store
  * @param {(p: object) => Promise<object>} deps.runTurn  chat turn (src/agent.js), with its dependencies bound
  */
-export function createApp({ adapter, store, runTurn, corsOrigins = [], status = {}, checkMemory }) {
+export function createApp({ adapter, store, runTurn, corsOrigins = [], status = {}, checkMemory, demoPage }) {
   const app = new Hono();
   const chatHits = new Map();
 
@@ -41,6 +41,9 @@ export function createApp({ adapter, store, runTurn, corsOrigins = [], status = 
     if (!lastCheck || Date.now() - lastCheck.at > 60_000) lastCheck = { at: Date.now(), result: await checkMemory() };
     return c.json(lastCheck.result, lastCheck.result.ok ? 200 : 503);
   });
+
+  // The public demo page: the seeded demo company, signed in with its demo-* tokens.
+  if (demoPage) app.get("/demo", (c) => c.html(demoPage));
 
   // Everything below needs a signed-in employee. Identity comes only from the
   // verified token — never from the request body or the model.

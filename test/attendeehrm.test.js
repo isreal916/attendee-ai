@@ -196,3 +196,26 @@ test("every shift date carries its weekday, so the model never works one out", a
     ["2026-10-04", "Sunday"],
   ]);
 });
+
+test("demo tokens sign in to the demo company only; real tokens never reach it", async () => {
+  const { withDemoCompany } = await import("../src/hr/index.js");
+  const { mockAdapter } = await import("../src/hr/mock.js");
+  const { adapter: real, calls } = backend(profileRoute);
+  const routed = withDemoCompany(real, mockAdapter);
+
+  const demo = await routed.resolveIdentity("demo-ada");
+  assert.equal(demo.demo, true);
+  assert.equal(demo.companyId, "demo");
+  assert.equal(calls.length, 0, "a demo sign-in never calls the real HR system");
+  assert.equal((await routed.getProfile(demo)).company, "Lumen Logistics (demo)");
+  assert.equal(calls.length, 0);
+
+  const ada = await routed.resolveIdentity(ADA_TOKEN);
+  assert.equal(ada.demo, undefined);
+  assert.equal(ada.companyId, "7");
+  assert.equal((await routed.getProfile(ada)).name, "Ada Okafor");
+  assert.ok(calls.length > 0, "a real sign-in is checked against AttendeeHRM");
+
+  // A made-up demo token is not an identity.
+  assert.equal(await routed.resolveIdentity("demo-nobody"), null);
+});

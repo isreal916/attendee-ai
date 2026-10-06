@@ -29,6 +29,8 @@ export const config = {
   // HR data source: "mock" (seeded demo company) or "attendeehrm"
   hrAdapter: env.HR_ADAPTER || "mock",
   attendeeApiUrl: env.ATTENDEE_API_URL || "",
+  // The public demo page (/demo) with the seeded demo company, alongside the real HR system.
+  demoEnabled: env.DEMO_ENABLED === "true",
 
   // Memory: "walrus" (MemWal relayer) or "mock" (in-process, for demos/tests)
   memoryBackend: env.MEMORY_BACKEND || (env.MEMWAL_PRIVATE_KEY ? "walrus" : "mock"),
